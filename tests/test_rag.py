@@ -60,16 +60,18 @@ def test_rag_evaluator_computes_metrics():
     expected = TutorProfile(id="expected", name="李若水", institution="上海交通大学", research_areas=["RAG", "智能体系统"], summary="RAG 和智能体系统")
 
     class FakeRetriever:
-        def search(self, query, limit=5):
+        def search(self, query, limit=5, strategy="reranker"):
             return [expected]
 
     evaluator = RAGEvaluator(retriever=FakeRetriever())
     case = evaluator.load_cases()[0]
     result = evaluator.evaluate_case(case, limit=5)
+    comparison = evaluator.compare(limit=5)
 
     assert result.recall == 1.0
     assert result.precision == 1.0
     assert result.relevance > 0
+    assert [item.strategy for item in comparison.strategies] == ["baseline", "hybrid", "reranker"]
 
 
 def test_hybrid_retriever_merges_dense_bm25_and_reranker_results():

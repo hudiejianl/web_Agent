@@ -231,8 +231,13 @@ class RAGEvaluationCaseResult(BaseModel):
 
 
 class RAGEvaluationResponse(BaseModel):
+    strategy: str = "reranker"
     case_count: int
     recall: float
     precision: float
     relevance: float
     cases: list[RAGEvaluationCaseResult] = Field(default_factory=list)
+
+
+class RAGEvaluationComparisonResponse(BaseModel):
+    strategies: list[RAGEvaluationResponse] = Field(default_factory=list)

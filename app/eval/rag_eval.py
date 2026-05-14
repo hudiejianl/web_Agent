@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.models.schemas import RAGEvaluationCase, RAGEvaluationCaseResult, RAGEvaluationResponse, TutorProfile
+from app.models.schemas import RAGEvaluationCase, RAGEvaluationCaseResult, RAGEvaluationComparisonResponse, RAGEvaluationResponse, TutorProfile
 from app.rag.retriever import TutorRetriever
 from app.services.ingestion import ensure_seed_data
 from app.storage.database import init_database
@@ -16,10 +16,11 @@ class RAGEvaluator:
         self.retriever = retriever or TutorRetriever()
         self.dataset_path = dataset_path
 
-    def evaluate(self, limit: int = 5) -> RAGEvaluationResponse:
+    def evaluate(self, limit: int = 5, strategy: str = "reranker") -> RAGEvaluationResponse:
         cases = self.load_cases()
-        results = [self.evaluate_case(case, limit=limit) for case in cases]
+        results = [self.evaluate_case(case, limit=limit, strategy=strategy) for case in cases]
         return RAGEvaluationResponse(
+            strategy=strategy,
             case_count=len(results),
             recall=self._average([result.recall for result in results]),
             precision=self._average([result.precision for result in results]),
@@ -27,8 +28,12 @@ class RAGEvaluator:
             cases=results,
         )
 
-    def evaluate_case(self, case: RAGEvaluationCase, limit: int = 5) -> RAGEvaluationCaseResult:
-        retrieved = self.retriever.search(case.query, limit=limit)
+    def compare(self, limit: int = 5, strategies: list[str] | None = None) -> RAGEvaluationComparisonResponse:
+        strategies = strategies or ["baseline", "hybrid", "reranker"]
+        return RAGEvaluationComparisonResponse(strategies=[self.evaluate(limit=limit, strategy=strategy) for strategy in strategies])
+
+    def evaluate_case(self, case: RAGEvaluationCase, limit: int = 5, strategy: str = "reranker") -> RAGEvaluationCaseResult:
+        retrieved = self.retriever.search(case.query, limit=limit, strategy=strategy)
         retrieved_names = [profile.name for profile in retrieved]
         expected = set(case.expected_tutor_names)
         retrieved_set = set(retrieved_names)

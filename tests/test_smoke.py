@@ -37,8 +37,14 @@ def test_rag_evaluation_endpoint():
     assert response.status_code == 200
     payload = response.json()
     assert payload["case_count"] >= 1
+    assert payload["strategy"] == "reranker"
     assert "recall" in payload
     assert payload["cases"]
+
+    compare_response = client.get("/api/eval/rag/compare")
+    assert compare_response.status_code == 200
+    compare_payload = compare_response.json()
+    assert [item["strategy"] for item in compare_payload["strategies"]] == ["baseline", "hybrid", "reranker"]
 
 
 def test_browser_browse_endpoint(monkeypatch):

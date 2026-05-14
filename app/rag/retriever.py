@@ -13,13 +13,17 @@ class TutorRetriever:
         self.vector_store = vector_store or VectorStore()
         self.reranker = reranker or TutorReranker()
 
-    def search(self, query: str, limit: int = 5) -> list[TutorProfile]:
+    def search(self, query: str, limit: int = 5, strategy: str = "reranker") -> list[TutorProfile]:
         candidate_limit = max(limit * 3, 10)
         all_profiles = self.repository.list(limit=200)
+        if strategy == "baseline":
+            return self._keyword_search(query, limit, all_profiles)
         dense_ids = self.vector_store.query(query, limit=candidate_limit)
         dense_profiles = [profile for tutor_id in dense_ids if (profile := self.repository.get(tutor_id))]
         bm25_results = BM25Retriever(all_profiles).search(query, limit=candidate_limit)
         merged = self._merge_results(dense_profiles, bm25_results)
+        if strategy == "hybrid":
+            return (merged or self._keyword_search(query, candidate_limit, all_profiles))[:limit]
         if merged:
             return self.reranker.rerank(query, merged, limit=limit)
         return self.reranker.rerank(query, self._keyword_search(query, candidate_limit, all_profiles), limit=limit)

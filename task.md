@@ -323,7 +323,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [ ] 评估 Faithfulness
 - [ ] 对比不同 embedding 模型
 - [ ] 对比不同 chunk size
-- [ ] 对比有无 reranker
+- [x] 对比有无 reranker / hybrid retrieval
 - [ ] 输出评估报告
 
 ---
