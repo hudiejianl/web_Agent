@@ -140,5 +140,30 @@ class IngestUrlResponse(BaseModel):
     indexed: bool
 
 
+class BrowserAction(BaseModel):
+    type: Literal["click", "wait", "scroll"]
+    selector: str | None = None
+    value: str | int | float | None = None
+
+
+class BrowserBrowseRequest(BaseModel):
+    url: HttpUrl
+    use_playwright: bool = True
+    actions: list[BrowserAction] = Field(default_factory=list)
+
+
+class BrowserBrowseResponse(BaseModel):
+    url: str
+    final_url: str
+    title: str
+    text: str
+    links: list[dict[str, str]] = Field(default_factory=list)
+    dom: dict[str, Any] = Field(default_factory=dict)
+    screenshots: list[str] = Field(default_factory=list)
+    used_playwright: bool = False
+    actions: list[dict[str, Any]] = Field(default_factory=list)
+    error: str | None = None
+
+
 class SearchResponse(BaseModel):
     tutors: list[TutorProfile]

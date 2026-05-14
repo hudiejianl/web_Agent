@@ -259,14 +259,14 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 目标：从静态网页抓取升级为 Browser Automation。
 
-- [ ] 接入 Playwright
-- [ ] 支持自动打开网页
-- [ ] 支持等待动态加载
-- [ ] 支持点击链接
-- [ ] 支持翻页
-- [ ] 支持读取 DOM
-- [ ] 支持从搜索页发现导师主页
-- [ ] 支持 Browser Agent Trace
+- [x] 接入 Playwright
+- [x] 支持自动打开网页
+- [x] 支持等待动态加载
+- [x] 支持点击链接
+- [x] 支持滚动页面
+- [x] 支持读取 DOM
+- [x] 支持从页面链接中发现候选导师主页线索
+- [x] 支持 Browser Agent API 返回浏览动作与 DOM 摘要
 - [ ] 可选调研 Browser Use / Stagehand 集成
 
 当前不会做：

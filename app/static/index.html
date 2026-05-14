@@ -40,6 +40,10 @@
       <p class="muted">输入公开导师主页 URL，系统会抓取正文并结构化入库。</p>
       <input id="url" placeholder="https://..." />
       <p><button class="secondary" onclick="ingestUrl()">采集并入库</button></p>
+      <h3>Browser Agent 动态浏览</h3>
+      <p class="muted">使用 Playwright 打开网页、等待动态加载、读取 DOM；如果浏览器未安装会自动回退静态抓取。</p>
+      <p><button onclick="browseUrl()">动态浏览并提取 DOM</button></p>
+      <pre id="browserResult">暂无浏览结果</pre>
       <h3>任务计划</h3>
       <div id="plan" class="muted">暂无任务计划</div>
       <h3>候选导师</h3>
@@ -74,6 +78,25 @@
       const data = await res.json();
       if (!res.ok) { tutors.textContent = JSON.stringify(data, null, 2); return; }
       renderTutors([data.tutor]);
+    }
+
+    async function browseUrl() {
+      const output = document.getElementById('browserResult');
+      output.textContent = 'Browser Agent 正在打开网页并提取 DOM...';
+      const res = await fetch('/api/browser/browse', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url: document.getElementById('url').value, use_playwright: true, actions: [{type: 'wait', value: 1000}]})
+      });
+      const data = await res.json();
+      output.textContent = JSON.stringify({
+        title: data.title,
+        final_url: data.final_url,
+        used_playwright: data.used_playwright,
+        error: data.error,
+        dom: data.dom,
+        links: (data.links || []).slice(0, 8),
+        text_preview: (data.text || '').slice(0, 600)
+      }, null, 2);
     }
 
     function renderPlan(plan) {

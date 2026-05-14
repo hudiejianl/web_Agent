@@ -27,3 +27,31 @@ def test_chat_returns_tutor_recommendations():
     assert payload["plan"]["steps"]
     assert payload["trace"]
     assert any(item["agent"] == "Planner Agent" for item in payload["trace"])
+
+
+def test_browser_browse_endpoint(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+    from app.models.schemas import BrowserBrowseResponse
+
+    def fake_browse(self, url, actions=None):
+        return BrowserBrowseResponse(
+            url=url,
+            final_url=url,
+            title="Demo Page",
+            text="dynamic content loaded",
+            links=[{"text": "Profile", "url": "https://example.com/profile"}],
+            dom={"headings": [{"tag": "h1", "text": "Demo"}], "links_count": 1},
+            used_playwright=True,
+            actions=[{"type": "wait", "status": "completed"}],
+        )
+
+    monkeypatch.setattr(BrowserAgent, "browse", fake_browse)
+    client = TestClient(app)
+    response = client.post(
+        "/api/browser/browse",
+        json={"url": "https://example.com", "use_playwright": True, "actions": [{"type": "wait", "value": 100}]},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["used_playwright"] is True
+    assert payload["dom"]["headings"][0]["text"] == "Demo"
