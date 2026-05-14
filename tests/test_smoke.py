@@ -54,6 +54,30 @@ def test_rag_evaluation_endpoint():
     assert [item["strategy"] for item in report_payload["comparison"]["strategies"]] == ["baseline", "hybrid", "reranker"]
 
 
+def test_browser_agent_sets_windows_proactor_policy(monkeypatch):
+    import asyncio
+
+    from app.agents import browser_agent
+    from app.agents.browser_agent import BrowserAgent
+
+    class FakeSelectorPolicy:
+        pass
+
+    class FakeProactorPolicy:
+        pass
+
+    selected_policy = FakeSelectorPolicy()
+    applied = []
+    monkeypatch.setattr(browser_agent.sys, "platform", "win32")
+    monkeypatch.setattr(browser_agent.asyncio, "WindowsProactorEventLoopPolicy", FakeProactorPolicy, raising=False)
+    monkeypatch.setattr(browser_agent.asyncio, "get_event_loop_policy", lambda: selected_policy)
+    monkeypatch.setattr(browser_agent.asyncio, "set_event_loop_policy", lambda policy: applied.append(policy))
+
+    BrowserAgent()._ensure_playwright_event_loop_policy()
+
+    assert isinstance(applied[0], FakeProactorPolicy)
+
+
 def test_browser_browse_endpoint(monkeypatch):
     from app.agents.browser_agent import BrowserAgent
     from app.models.schemas import BrowserBrowseResponse

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import sys
 from urllib.parse import urljoin
 
 import requests
@@ -50,6 +52,7 @@ class BrowserAgent:
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
         from playwright.sync_api import sync_playwright
 
+        self._ensure_playwright_event_loop_policy()
         settings = get_settings()
         action_results: list[dict[str, object]] = []
         with sync_playwright() as playwright:
@@ -78,6 +81,12 @@ class BrowserAgent:
             used_playwright=True,
             actions=action_results,
         )
+
+    def _ensure_playwright_event_loop_policy(self) -> None:
+        if sys.platform == "win32" and hasattr(asyncio, "WindowsProactorEventLoopPolicy"):
+            policy = asyncio.get_event_loop_policy()
+            if not isinstance(policy, asyncio.WindowsProactorEventLoopPolicy):
+                asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
     def _run_action(self, page, action: BrowserAction) -> dict[str, object]:
         try:
