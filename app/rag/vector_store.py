@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import chromadb
+from chromadb.config import Settings as ChromaSettings
 
 from app.config import get_settings
 from app.models.schemas import TutorProfile
@@ -10,7 +11,7 @@ from app.rag.embeddings import get_embedding_function
 class VectorStore:
     def __init__(self):
         settings = get_settings()
-        self.client = chromadb.PersistentClient(path=settings.chroma_path)
+        self.client = chromadb.PersistentClient(path=settings.chroma_path, settings=ChromaSettings(anonymized_telemetry=False))
         self.collection = self.client.get_or_create_collection(
             name=settings.chroma_collection,
             embedding_function=get_embedding_function(),
