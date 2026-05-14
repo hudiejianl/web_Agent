@@ -34,6 +34,10 @@
       <pre id="answer">等待输入...</pre>
       <h3>检索证据</h3>
       <div id="retrievalEvidence" class="muted">暂无检索证据</div>
+      <h3>RAG Evaluation 报告</h3>
+      <p class="muted">对比 baseline、hybrid 和 reranker 三种检索策略的 Recall、Precision 与 Relevance。</p>
+      <p><button onclick="runRagEvaluationReport()">生成评估报告</button></p>
+      <pre id="ragEvalReport">暂无评估报告</pre>
       <h3>Agent Trace</h3>
       <div id="trace" class="muted">暂无执行轨迹</div>
     </section>
@@ -105,6 +109,14 @@
         links: (data.links || []).slice(0, 8),
         text_preview: (data.text || '').slice(0, 600)
       }, null, 2);
+    }
+
+    async function runRagEvaluationReport() {
+      const output = document.getElementById('ragEvalReport');
+      output.textContent = '正在生成 RAG Evaluation 报告...';
+      const res = await fetch('/api/eval/rag/report');
+      const data = await res.json();
+      output.textContent = res.ok ? data.markdown : JSON.stringify(data, null, 2);
     }
 
     async function runBrowserResearch() {

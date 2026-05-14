@@ -241,3 +241,8 @@ class RAGEvaluationResponse(BaseModel):
 
 class RAGEvaluationComparisonResponse(BaseModel):
     strategies: list[RAGEvaluationResponse] = Field(default_factory=list)
+
+
+class RAGEvaluationReportResponse(BaseModel):
+    markdown: str
+    comparison: RAGEvaluationComparisonResponse

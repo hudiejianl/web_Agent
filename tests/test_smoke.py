@@ -46,6 +46,13 @@ def test_rag_evaluation_endpoint():
     compare_payload = compare_response.json()
     assert [item["strategy"] for item in compare_payload["strategies"]] == ["baseline", "hybrid", "reranker"]
 
+    report_response = client.get("/api/eval/rag/report")
+    assert report_response.status_code == 200
+    report_payload = report_response.json()
+    assert "# RAG Evaluation Report" in report_payload["markdown"]
+    assert "| Strategy | Cases | Recall | Precision | Relevance |" in report_payload["markdown"]
+    assert [item["strategy"] for item in report_payload["comparison"]["strategies"]] == ["baseline", "hybrid", "reranker"]
+
 
 def test_browser_browse_endpoint(monkeypatch):
     from app.agents.browser_agent import BrowserAgent

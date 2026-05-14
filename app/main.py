@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
-from app.models.schemas import BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, RAGEvaluationComparisonResponse, RAGEvaluationResponse, SearchResponse
+from app.models.schemas import BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, SearchResponse
 from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
 from app.services.browser_research import BrowserResearchService
@@ -81,6 +81,11 @@ def evaluate_rag(limit: int = 5, strategy: str = "reranker") -> RAGEvaluationRes
 @app.get("/api/eval/rag/compare", response_model=RAGEvaluationComparisonResponse)
 def compare_rag(limit: int = 5) -> RAGEvaluationComparisonResponse:
     return RAGEvaluator().compare(limit=limit)
+
+
+@app.get("/api/eval/rag/report", response_model=RAGEvaluationReportResponse)
+def report_rag(limit: int = 5) -> RAGEvaluationReportResponse:
+    return RAGEvaluator().report(limit=limit)
 
 
 @app.get("/api/memory/{session_id}")

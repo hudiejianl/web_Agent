@@ -324,7 +324,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [ ] 对比不同 embedding 模型
 - [ ] 对比不同 chunk size
 - [x] 对比有无 reranker / hybrid retrieval
-- [ ] 输出评估报告
+- [x] 输出评估报告
 
 ---
 
