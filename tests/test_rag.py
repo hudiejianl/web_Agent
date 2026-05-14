@@ -1,3 +1,4 @@
+from app.eval.rag_eval import RAGEvaluator
 from app.models.schemas import TutorProfile
 from app.rag.bm25 import BM25Retriever
 from app.rag.evidence import RetrievalEvidenceBuilder
@@ -53,6 +54,22 @@ def test_reranker_prioritizes_query_aligned_profiles():
     results = TutorReranker().rerank("武汉 多模态 人工智能 硕士 导师", [generic, aligned], limit=2)
 
     assert [profile.id for profile in results] == ["aligned", "generic"]
+
+
+def test_rag_evaluator_computes_metrics():
+    expected = TutorProfile(id="expected", name="李若水", institution="上海交通大学", research_areas=["RAG", "智能体系统"], summary="RAG 和智能体系统")
+
+    class FakeRetriever:
+        def search(self, query, limit=5):
+            return [expected]
+
+    evaluator = RAGEvaluator(retriever=FakeRetriever())
+    case = evaluator.load_cases()[0]
+    result = evaluator.evaluate_case(case, limit=5)
+
+    assert result.recall == 1.0
+    assert result.precision == 1.0
+    assert result.relevance > 0
 
 
 def test_hybrid_retriever_merges_dense_bm25_and_reranker_results():

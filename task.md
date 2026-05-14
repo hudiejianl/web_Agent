@@ -315,11 +315,11 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 目标：从“能跑”升级为“可评估、可比较、可优化”。
 
-- [ ] 构建 evaluation dataset
-- [ ] 设计导师推荐测试问题集
-- [ ] 评估 Recall
-- [ ] 评估 Precision
-- [ ] 评估 Relevance
+- [x] 构建 evaluation dataset 第一版
+- [x] 设计导师推荐测试问题集第一版
+- [x] 评估 Recall
+- [x] 评估 Precision
+- [x] 评估 Relevance
 - [ ] 评估 Faithfulness
 - [ ] 对比不同 embedding 模型
 - [ ] 对比不同 chunk size

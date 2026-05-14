@@ -31,6 +31,16 @@ def test_chat_returns_tutor_recommendations():
     assert any(item["agent"] == "Planner Agent" for item in payload["trace"])
 
 
+def test_rag_evaluation_endpoint():
+    client = TestClient(app)
+    response = client.get("/api/eval/rag")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["case_count"] >= 1
+    assert "recall" in payload
+    assert payload["cases"]
+
+
 def test_browser_browse_endpoint(monkeypatch):
     from app.agents.browser_agent import BrowserAgent
     from app.models.schemas import BrowserBrowseResponse

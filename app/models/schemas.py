@@ -211,3 +211,28 @@ class BrowserResearchResponse(BaseModel):
 
 class SearchResponse(BaseModel):
     tutors: list[TutorProfile]
+
+
+class RAGEvaluationCase(BaseModel):
+    id: str
+    query: str
+    expected_tutor_names: list[str] = Field(default_factory=list)
+    relevant_terms: list[str] = Field(default_factory=list)
+
+
+class RAGEvaluationCaseResult(BaseModel):
+    case_id: str
+    query: str
+    expected_tutor_names: list[str]
+    retrieved_tutor_names: list[str]
+    recall: float
+    precision: float
+    relevance: float
+
+
+class RAGEvaluationResponse(BaseModel):
+    case_count: int
+    recall: float
+    precision: float
+    relevance: float
+    cases: list[RAGEvaluationCaseResult] = Field(default_factory=list)

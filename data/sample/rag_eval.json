@@ -1,0 +1,20 @@
+[
+  {
+    "id": "rag-agent-shanghai",
+    "query": "我想找上海做 RAG 和智能体系统方向的导师",
+    "expected_tutor_names": ["李若水"],
+    "relevant_terms": ["RAG", "智能体", "信息检索", "大语言模型", "上海"]
+  },
+  {
+    "id": "medical-ai-hangzhou",
+    "query": "推荐杭州人工智能和医学影像方向导师",
+    "expected_tutor_names": ["陈明"],
+    "relevant_terms": ["人工智能", "医学影像", "机器学习", "杭州"]
+  },
+  {
+    "id": "software-engineering-nanjing",
+    "query": "南京软件工程和代码智能方向导师",
+    "expected_tutor_names": ["王启航"],
+    "relevant_terms": ["南京", "软件工程", "代码智能", "程序分析"]
+  }
+]

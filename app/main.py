@@ -9,7 +9,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
-from app.models.schemas import BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, SearchResponse
+from app.models.schemas import BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, RAGEvaluationResponse, SearchResponse
+from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
 from app.services.browser_research import BrowserResearchService
 from app.services.chat import ChatService
@@ -70,6 +71,11 @@ def browser_research(request: BrowserResearchRequest) -> BrowserResearchResponse
 @app.get("/api/tutors/search", response_model=SearchResponse)
 def search_tutors(q: str, limit: int = 5) -> SearchResponse:
     return SearchResponse(tutors=TutorRetriever().search(q, limit=limit))
+
+
+@app.get("/api/eval/rag", response_model=RAGEvaluationResponse)
+def evaluate_rag(limit: int = 5) -> RAGEvaluationResponse:
+    return RAGEvaluator().evaluate(limit=limit)
 
 
 @app.get("/api/memory/{session_id}")
