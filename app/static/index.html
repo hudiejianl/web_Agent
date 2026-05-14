@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>升学智能体 Research Agent</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f7fb; color: #172033; }
+    header { padding: 28px 40px; background: #1d4ed8; color: white; }
+    main { max-width: 1200px; margin: 24px auto; padding: 0 20px; display: grid; grid-template-columns: 1.3fr .9fr; gap: 20px; }
+    section { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(15, 23, 42, .08); }
+    textarea, input { width: 100%; box-sizing: border-box; border: 1px solid #d7deea; border-radius: 12px; padding: 12px; font-size: 15px; }
+    button { border: 0; border-radius: 12px; padding: 11px 16px; background: #2563eb; color: white; cursor: pointer; font-weight: 700; }
+    button.secondary { background: #0f766e; }
+    pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius: 12px; padding: 14px; min-height: 220px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin: 10px 0; }
+    .trace { border-left: 4px solid #2563eb; padding: 10px 12px; margin: 10px 0; background: #f8fafc; border-radius: 10px; }
+    .step { display: grid; grid-template-columns: 86px 1fr; gap: 8px; border-bottom: 1px solid #eef2f7; padding: 8px 0; }
+    .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; background: #dbeafe; color: #1e40af; font-size: 12px; font-weight: 700; }
+    .muted { color: #64748b; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>升学智能体系统（Research Agent）</h1>
+    <p>LangGraph 多智能体编排 · RAG 导师推荐 · 网页采集 · 长期记忆 · 上下文压缩</p>
+  </header>
+  <main>
+    <section>
+      <h2>多轮升学咨询</h2>
+      <p class="muted">示例：我想申请 AI 和 RAG 方向硕士，偏好江浙沪，帮我推荐导师。</p>
+      <textarea id="message" rows="5">我想申请 AI 和 RAG 方向硕士，偏好江浙沪，帮我推荐导师。</textarea>
+      <p><button onclick="sendChat()">发送咨询</button></p>
+      <pre id="answer">等待输入...</pre>
+      <h3>Agent Trace</h3>
+      <div id="trace" class="muted">暂无执行轨迹</div>
+    </section>
+    <section>
+      <h2>导师主页采集</h2>
+      <p class="muted">输入公开导师主页 URL，系统会抓取正文并结构化入库。</p>
+      <input id="url" placeholder="https://..." />
+      <p><button class="secondary" onclick="ingestUrl()">采集并入库</button></p>
+      <h3>任务计划</h3>
+      <div id="plan" class="muted">暂无任务计划</div>
+      <h3>候选导师</h3>
+      <div id="tutors"></div>
+    </section>
+  </main>
+  <script>
+    const sessionId = localStorage.getItem('sessionId') || crypto.randomUUID();
+    localStorage.setItem('sessionId', sessionId);
+
+    async function sendChat() {
+      const answer = document.getElementById('answer');
+      answer.textContent = '智能体正在规划、检索和生成建议...';
+      const res = await fetch('/api/chat', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({session_id: sessionId, message: document.getElementById('message').value})
+      });
+      const data = await res.json();
+      answer.textContent = data.answer + '\n\n长期记忆：' + JSON.stringify(data.memory.profile, null, 2);
+      renderPlan(data.plan);
+      renderTrace(data.trace || []);
+      renderTutors(data.tutors || []);
+    }
+
+    async function ingestUrl() {
+      const tutors = document.getElementById('tutors');
+      tutors.innerHTML = '<p>正在采集...</p>';
+      const res = await fetch('/api/ingest/url', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url: document.getElementById('url').value})
+      });
+      const data = await res.json();
+      if (!res.ok) { tutors.textContent = JSON.stringify(data, null, 2); return; }
+      renderTutors([data.tutor]);
+    }
+
+    function renderPlan(plan) {
+      const steps = (plan && plan.steps) || [];
+      document.getElementById('plan').innerHTML = steps.map(step => `
+        <div class="step">
+          <span class="badge">${step.status}</span>
+          <div>
+            <strong>${step.name}</strong><br />
+            <span class="muted">${step.agent} · ID: ${step.id}</span><br />
+            <span class="muted">依赖：${(step.depends_on || []).join('、') || '无'}</span><br />
+            <span class="muted">原因：${step.rationale}</span><br />
+            <span class="muted">预期输出：${step.expected_output || '未定义'}</span><br />
+            <span class="muted">实际输出：${JSON.stringify(step.outputs || {})}</span>
+            ${step.error ? `<br /><span style="color:#b91c1c">错误：${step.error}</span>` : ''}
+          </div>
+        </div>
+      `).join('') || '<p class="muted">暂无任务计划</p>';
+    }
+
+    function renderTrace(items) {
+      document.getElementById('trace').innerHTML = items.map(item => `
+        <div class="trace">
+          <strong>[${item.agent}] ${item.action}</strong>
+          <span class="badge">${item.status}</span><br />
+          <span>${item.detail}</span>
+        </div>
+      `).join('') || '<p class="muted">暂无执行轨迹</p>';
+    }
+
+    function renderTutors(items) {
+      document.getElementById('tutors').innerHTML = items.map(t => `
+        <div class="card">
+          <strong>${t.name}</strong><br />
+          <span>${t.institution || ''} ${t.department || ''}</span><br />
+          <span class="muted">方向：${(t.research_areas || []).join('、')}</span>
+          <p>${t.summary || ''}</p>
+        </div>
+      `).join('') || '<p class="muted">暂无导师结果</p>';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,399 @@
+# 升学智能体系统任务记录
+
+## 当前状态
+
+项目已完成一个可运行的 MVP：具备 FastAPI 后端、LangGraph 多智能体工作流、RAG 检索、ChromaDB 本地向量库、SQLite 存储、网页采集、长期记忆、Agent Trace 和本地演示页面。
+
+当前系统更准确地说是：**Agent / RAG / Memory / Trace 的工程骨架已经跑通，并已支持可选 LLM 调用；研究级检索、真实 Browser Automation 和评估系统仍需增强**。
+
+---
+
+## 已完成
+
+### 1. 项目基础工程
+
+- [x] 创建 Python 项目结构
+- [x] 配置 `requirements.txt`
+- [x] 配置 `.env.example`
+- [x] 创建 FastAPI 应用入口
+- [x] 创建本地静态演示页面
+- [x] 创建测试目录与冒烟测试
+- [x] 使用 Conda 环境 `webagent` 安装完整依赖
+- [x] 运行测试并通过：`2 passed`
+
+关键文件：
+
+- `app/main.py`
+- `requirements.txt`
+- `.env.example`
+- `tests/test_smoke.py`
+
+---
+
+### 2. FastAPI 后端接口
+
+- [x] `GET /api/health`：健康检查
+- [x] `POST /api/chat`：升学咨询对话
+- [x] `POST /api/ingest/url`：采集导师主页 URL
+- [x] `GET /api/tutors/search`：导师检索
+- [x] `GET /api/memory/{session_id}`：查看长期记忆
+
+关键文件：
+
+- `app/main.py`
+- `app/services/chat.py`
+- `app/services/ingestion.py`
+
+---
+
+### 3. 数据模型
+
+- [x] 导师档案模型 `TutorProfile`
+- [x] 论文模型 `Paper`
+- [x] 证据模型 `Evidence`
+- [x] 用户画像模型 `UserProfile`
+- [x] 长期记忆模型 `MemoryState`
+- [x] 多步任务计划模型 `AgentPlan`
+- [x] 任务步骤模型 `PlanStep`
+- [x] Agent 执行轨迹模型 `AgentTrace`
+- [x] API 请求/响应模型
+
+关键文件：
+
+- `app/models/schemas.py`
+
+---
+
+### 4. SQLite 本地存储
+
+- [x] 初始化 SQLite 数据库
+- [x] 保存导师档案
+- [x] 保存长期记忆
+- [x] 保存会话消息
+- [x] 从示例 JSON 导入导师数据
+
+关键文件：
+
+- `app/storage/database.py`
+- `app/storage/repositories.py`
+- `data/sample/faculty_seed.json`
+
+---
+
+### 5. RAG 与向量数据库
+
+- [x] 接入 ChromaDB 本地向量库
+- [x] 实现导师档案向量写入
+- [x] 实现导师检索器
+- [x] 默认使用本地 `hashing` embedding，避免 Hugging Face 模型下载阻塞
+- [x] 保留 `sentence-transformers` 依赖，后续可切换到真实 embedding 模型
+- [x] 检索失败时提供关键词 fallback
+
+关键文件：
+
+- `app/rag/embeddings.py`
+- `app/rag/vector_store.py`
+- `app/rag/retriever.py`
+
+当前限制：
+
+- 默认 hashing embedding 语义检索能力有限
+- 还没有 Hybrid Retrieval
+- 还没有 reranker
+- 还没有 RAG Evaluation
+
+---
+
+### 6. 多智能体工作流
+
+- [x] 使用 LangGraph 构建多节点工作流
+- [x] Memory Agent：加载和更新记忆
+- [x] Planner Agent：生成任务计划
+- [x] RAG Retriever：召回导师
+- [x] Research Agent：分析候选导师匹配基础
+- [x] Advisor Agent：生成推荐建议
+- [x] 工作流返回 answer、plan、tutors、memory、trace
+
+关键文件：
+
+- `app/graph/admission_graph.py`
+- `app/agents/planner_agent.py`
+- `app/agents/memory_agent.py`
+- `app/agents/advisor_agent.py`
+
+当前限制：
+
+- Planner 仍是规则规划，不是真正 LLM 规划
+- Agent 间通信较简单
+- 复杂任务还不能真正自动多轮搜索与执行
+
+---
+
+### 7. Browser Agent 与网页采集
+
+- [x] 使用 `requests` 抓取公开网页
+- [x] 使用 BeautifulSoup 提取标题、正文、链接
+- [x] 使用 trafilatura 提取网页正文
+- [x] 规则化抽取导师姓名、职称、机构、院系、邮箱、地区、研究方向、论文线索
+- [x] 支持 URL 采集后写入数据库和向量库
+
+关键文件：
+
+- `app/agents/browser_agent.py`
+- `app/agents/research_agent.py`
+- `app/crawlers/faculty.py`
+- `app/crawlers/papers.py`
+
+当前限制：
+
+- 还不是真正 Browser Automation
+- 不支持 Playwright 动态网页浏览
+- 不支持点击、翻页、等待动态加载、DOM 操作
+- 不处理登录、验证码或反爬绕过
+
+---
+
+### 8. 长期记忆与上下文压缩
+
+- [x] 记录用户研究兴趣
+- [x] 记录地区偏好
+- [x] 记录目标阶段
+- [x] 保存最近对话消息
+- [x] 在消息达到阈值后生成压缩摘要
+
+关键文件：
+
+- `app/agents/memory_agent.py`
+- `app/storage/repositories.py`
+
+当前限制：
+
+- 目前主要是 profile memory
+- Episodic Memory 还不完整
+- Semantic Memory 还不完整
+- 上下文压缩仍是简单摘要，不是语义压缩算法
+
+---
+
+### 9. Agent Trace 与任务计划可视化
+
+- [x] 每次对话返回结构化 `AgentTrace`
+- [x] 记录各智能体节点执行过程
+- [x] 前端展示 Agent Trace
+- [x] 前端展示多步任务计划
+- [x] 支持查看每个步骤的 agent、status、rationale、expected output
+
+关键文件：
+
+- `app/models/schemas.py`
+- `app/graph/admission_graph.py`
+- `app/static/index.html`
+
+当前限制：
+
+- Trace 只保存在当前响应中
+- 还没有持久化 Agent Trace
+- 还没有 LangSmith / OpenTelemetry 集成
+
+---
+
+## 未完成 / 接下来要深入的部分
+
+### 第一阶段：接入真正大模型调用
+
+目标：让系统从规则模板回答升级为真正的 LLM Agent。
+
+- [x] 新增 `app/llm/provider.py`
+- [x] 在 `.env.example` 中增加 LLM 配置
+  - `LLM_PROVIDER`
+  - `ANTHROPIC_API_KEY`
+  - `OPENAI_API_KEY`
+  - `OPENAI_BASE_URL`
+  - `LLM_MODEL`
+- [x] 实现统一 `LLMClient`
+- [x] 支持 Anthropic Claude API
+- [x] 支持 OpenAI-compatible API
+- [x] 没有 API Key 时 fallback 到当前规则逻辑
+- [x] Advisor Agent 接入 LLM 生成个性化推荐
+- [x] Research Agent 接入 LLM 进行网页结构化抽取
+- [x] Agent Trace 中显示 LLM 调用过程
+- [x] 已配置 DeepSeek OpenAI-compatible 调用：`LLM_PROVIDER=openai-compatible`，`LLM_MODEL=deepseek-v4-flash`
+- [x] 测试环境默认禁用真实 LLM，避免 pytest 消耗 API 额度
+
+预期效果：
+
+- 不同问题返回更个性化
+- 推荐理由更自然
+- 网页结构化准确率更高
+- 前端可看到 `LLM Agent` 调用轨迹
+
+---
+
+### 第二阶段：增强 Planner 与多步执行能力
+
+目标：从固定 RAG pipeline 升级为更接近 Autonomous Agent 的多步任务系统。
+
+- [x] Planner 输出更严格的结构化任务计划
+- [x] 每个计划步骤有输入、输出、依赖关系
+- [ ] 支持步骤状态持久化
+- [x] 支持复杂任务自动拆解
+- [x] 支持 Browser / Research / Retriever / Advisor 多轮协作
+- [x] 支持任务失败原因记录与重试策略
+- [ ] 支持用户在中途补充约束后重新规划
+
+示例目标任务：
+
+```text
+帮我找武汉地区做多模态方向、近三年发过顶会、并且有企业合作的导师。
+```
+
+期望执行链路：
+
+```text
+Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retriever → Advisor Agent
+```
+
+---
+
+### 第三阶段：真正 Browser Agent
+
+目标：从静态网页抓取升级为 Browser Automation。
+
+- [ ] 接入 Playwright
+- [ ] 支持自动打开网页
+- [ ] 支持等待动态加载
+- [ ] 支持点击链接
+- [ ] 支持翻页
+- [ ] 支持读取 DOM
+- [ ] 支持从搜索页发现导师主页
+- [ ] 支持 Browser Agent Trace
+- [ ] 可选调研 Browser Use / Stagehand 集成
+
+当前不会做：
+
+- [ ] 不绕过登录
+- [ ] 不绕过验证码
+- [ ] 不做反爬规避
+
+---
+
+### 第四阶段：研究级 RAG
+
+目标：提升检索质量，使推荐不再依赖简单 hashing。
+
+- [ ] 支持 BGE-M3 / bge-large-zh embedding
+- [ ] 支持 OpenAI / Claude 兼容 embedding API
+- [ ] 支持 BM25 关键词检索
+- [ ] 实现 Hybrid Retrieval：BM25 + Dense Retrieval
+- [ ] 接入 reranker：bge-reranker / jina-reranker
+- [ ] 支持 chunking 策略
+- [ ] 支持论文、主页、招生信息分字段检索
+- [ ] 支持引用证据高亮
+
+---
+
+### 第五阶段：评估系统
+
+目标：从“能跑”升级为“可评估、可比较、可优化”。
+
+- [ ] 构建 evaluation dataset
+- [ ] 设计导师推荐测试问题集
+- [ ] 评估 Recall
+- [ ] 评估 Precision
+- [ ] 评估 Relevance
+- [ ] 评估 Faithfulness
+- [ ] 对比不同 embedding 模型
+- [ ] 对比不同 chunk size
+- [ ] 对比有无 reranker
+- [ ] 输出评估报告
+
+---
+
+### 第六阶段：高级长期记忆
+
+目标：从简单用户画像升级为长期可演化记忆系统。
+
+- [ ] Episodic Memory：记录用户联系过的导师、反馈、拒绝、偏好变化
+- [ ] Semantic Memory：抽象用户长期研究兴趣和申请策略
+- [ ] Procedural Memory：记录用户偏好的申请流程与材料准备方式
+- [ ] Memory Retrieval：回答时检索相关历史记忆
+- [ ] Memory Reflection：定期总结用户长期目标变化
+- [ ] Memory Conflict Resolution：处理用户偏好冲突
+
+---
+
+### 第七阶段：可观察性与工程化
+
+目标：提升项目工程深度和可展示性。
+
+- [ ] 持久化 Agent Trace
+- [ ] 接入 LangSmith 或 OpenTelemetry
+- [ ] 增加请求 ID / session trace ID
+- [ ] 增加日志系统
+- [ ] 增加错误处理与失败恢复
+- [ ] 增加配置化开关
+- [ ] 增加 Dockerfile
+- [ ] 增加启动脚本
+
+---
+
+## 当前推荐下一步
+
+优先级最高的是：
+
+1. **配置真实 LLM API Key 并进行端到端验证**
+2. **增强 Planner 与多步执行能力**
+3. **接入 Playwright，实现真正 Browser Agent**
+4. **升级 RAG：BGE embedding + Hybrid Retrieval + reranker**
+
+原因：
+
+项目已经支持可选 LLM 调用；下一步需要用真实 API Key 验证大模型生成效果，并把 Planner / Browser / RAG 做深，提升 Agent 味和研究味。
+
+LLM 配置示例：
+
+```env
+LLM_PROVIDER=anthropic
+LLM_MODEL=claude-sonnet-4-6
+ANTHROPIC_API_KEY=你的 Key
+```
+
+或 OpenAI-compatible：
+
+```env
+LLM_PROVIDER=openai-compatible
+LLM_MODEL=你的模型名
+OPENAI_API_KEY=你的 Key
+OPENAI_BASE_URL=https://api.openai.com/v1
+```
+
+---
+
+## 常用命令
+
+安装依赖：
+
+```powershell
+conda activate webagent
+python -m pip install -r requirements.txt
+```
+
+运行项目：
+
+```powershell
+conda activate webagent
+python -m uvicorn app.main:app --reload
+```
+
+运行测试：
+
+```powershell
+conda activate webagent
+python -m pytest -q
+```
+
+访问页面：
+
+```text
+http://127.0.0.1:8000
+```

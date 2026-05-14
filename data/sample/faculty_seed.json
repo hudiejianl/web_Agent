@@ -1,0 +1,62 @@
+[
+  {
+    "name": "陈明",
+    "title": "教授",
+    "institution": "浙江大学",
+    "department": "计算机科学与技术学院",
+    "location": "杭州",
+    "homepage": "https://example.edu/chen-ming",
+    "email": "chenming@example.edu",
+    "research_areas": ["人工智能", "机器学习", "医学影像分析"],
+    "admission_directions": ["智能医疗", "深度学习", "跨模态学习"],
+    "requirements": ["数学基础扎实", "熟悉 Python 与 PyTorch", "有科研论文或项目经历优先"],
+    "papers": [
+      {"title": "Robust Multimodal Learning for Medical Image Diagnosis", "year": 2024, "venue": "MICCAI"},
+      {"title": "Efficient Representation Learning for Clinical Decision Support", "year": 2023, "venue": "NeurIPS Workshop"}
+    ],
+    "summary": "长期从事机器学习与医学影像智能分析研究，适合希望申请 AI+医疗方向的学生。",
+    "evidence": [
+      {"title": "导师主页", "url": "https://example.edu/chen-ming", "snippet": "研究方向包括人工智能、机器学习和医学影像分析。"}
+    ]
+  },
+  {
+    "name": "李若水",
+    "title": "副教授",
+    "institution": "上海交通大学",
+    "department": "电子信息与电气工程学院",
+    "location": "上海",
+    "homepage": "https://example.edu/li-ruoshui",
+    "email": "liruoshui@example.edu",
+    "research_areas": ["自然语言处理", "大语言模型", "信息检索"],
+    "admission_directions": ["大模型应用", "RAG", "智能体系统"],
+    "requirements": ["有 NLP 或检索系统经验", "英文论文阅读能力强", "愿意参与开源项目"],
+    "papers": [
+      {"title": "Agentic Retrieval-Augmented Generation for Scientific Discovery", "year": 2025, "venue": "ACL"},
+      {"title": "Long-context Planning for Web Agents", "year": 2024, "venue": "EMNLP"}
+    ],
+    "summary": "关注大语言模型、检索增强生成和智能体系统，适合希望做 Research Agent 或 RAG 的申请者。",
+    "evidence": [
+      {"title": "导师主页", "url": "https://example.edu/li-ruoshui", "snippet": "团队方向覆盖大语言模型、信息检索与智能体。"}
+    ]
+  },
+  {
+    "name": "王启航",
+    "title": "研究员",
+    "institution": "南京大学",
+    "department": "软件学院",
+    "location": "南京",
+    "homepage": "https://example.edu/wang-qihang",
+    "email": "wangqihang@example.edu",
+    "research_areas": ["软件工程", "程序分析", "可信 AI"],
+    "admission_directions": ["智能软件工程", "代码智能", "软件安全"],
+    "requirements": ["具备编程竞赛或工程项目经验", "熟悉 Java/Python 任一语言", "对软件质量有兴趣"],
+    "papers": [
+      {"title": "Program Analysis for Reliable AI-assisted Software Engineering", "year": 2024, "venue": "ICSE"},
+      {"title": "Evaluating Code Agents in Real-world Maintenance Tasks", "year": 2025, "venue": "FSE"}
+    ],
+    "summary": "研究智能化软件开发与可信 AI，适合有工程背景并希望做代码智能方向的学生。",
+    "evidence": [
+      {"title": "导师主页", "url": "https://example.edu/wang-qihang", "snippet": "主要研究软件工程、程序分析和可信 AI。"}
+    ]
+  }
+]

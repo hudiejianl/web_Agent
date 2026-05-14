@@ -1,0 +1,28 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Runtime data
+data/runtime/
+*.sqlite3
+*.db
+
+# IDE / local tooling
+.vscode/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
