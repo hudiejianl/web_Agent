@@ -24,6 +24,11 @@ POSITIVE_FEATURES = {
     "teacher": 4.0,
     "profile": 3.0,
     "people": 2.0,
+    "师资队伍": 4.0,
+    "师资力量": 4.0,
+    "教师队伍": 4.0,
+    "教师名录": 4.0,
+    "faculty list": 4.0,
 }
 NEGATIVE_FEATURES = {
     "旅游": -10.0,
@@ -38,7 +43,7 @@ NEGATIVE_FEATURES = {
     "javascript:": -10.0,
     "mailto:": -10.0,
 }
-ACADEMIC_PATH_HINTS = ["teacher", "faculty", "people", "profile", "staff", "person", "teacherinfo", "tutor"]
+ACADEMIC_PATH_HINTS = ["teacher", "faculty", "people", "profile", "staff", "person", "teacherinfo", "tutor", "szdw", "szll", "teachers"]
 
 
 @dataclass(frozen=True)

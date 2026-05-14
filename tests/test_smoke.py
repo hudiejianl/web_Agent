@@ -68,7 +68,14 @@ def test_browser_research_endpoint(monkeypatch):
                 "url": url,
                 "title": "Search",
                 "text": "search results",
-                "links": [{"text": "张三 教授 个人主页", "url": "https://cs.example.edu.cn/teacher/zhangsan"}],
+                "links": [{"text": "示例大学 计算机学院 师资队伍", "url": "https://cs.example.edu.cn/faculty"}],
+            }
+        if url.endswith("/faculty"):
+            return {
+                "url": url,
+                "title": "师资队伍 - 示例大学计算机学院",
+                "text": "教师队伍 人工智能 多模态",
+                "links": [{"text": "张三 教授 个人主页 研究方向 人工智能 多模态", "url": "https://cs.example.edu.cn/teacher/zhangsan"}],
             }
         return {
             "url": url,
@@ -88,7 +95,7 @@ def test_browser_research_endpoint(monkeypatch):
     client = TestClient(app)
     response = client.post(
         "/api/browser/research",
-        json={"query": "人工智能 多模态 导师", "max_search_pages": 1, "max_candidates": 3, "max_ingest": 1, "use_playwright": False},
+        json={"query": "人工智能 多模态 导师", "max_search_pages": 1, "max_candidates": 3, "max_ingest": 1, "navigation_depth": 1, "use_playwright": False},
     )
     assert response.status_code == 200
     payload = response.json()
@@ -97,4 +104,5 @@ def test_browser_research_endpoint(monkeypatch):
     assert payload["tutors"]
     assert payload["tutors"][0]["name"] == "张三"
     assert any(item["agent"] == "Query Rewriter Agent" for item in payload["trace"])
+    assert any(item["action"] == "discover_navigation_links" for item in payload["trace"])
     assert any(item["agent"] == "Browser Agent" for item in payload["trace"])

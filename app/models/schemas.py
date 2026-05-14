@@ -184,6 +184,8 @@ class BrowserResearchRequest(BaseModel):
     max_search_pages: int = 1
     max_candidates: int = 6
     max_ingest: int = 3
+    navigation_depth: int = 1
+    max_navigation_pages: int = 8
     use_playwright: bool = True
 
 

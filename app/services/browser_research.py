@@ -33,6 +33,7 @@ class BrowserResearchService:
         trace.append(self._trace("Planner Agent", "build_search_urls", "completed", f"生成 {len(search_urls)} 个搜索入口"))
 
         candidates = self._collect_candidates(request, search_urls, rewritten_queries, allowed_domains, trace)
+        candidates = self._discover_navigation_candidates(request, candidates, rewritten_queries, allowed_domains, trace)
         tutors = self._browse_and_ingest(request, candidates, trace)
         trace.append(self._trace("Advisor Agent", "summarize_research", "completed", f"筛选 {len(candidates)} 个候选链接，入库 {len(tutors)} 位导师"))
         return BrowserResearchResponse(query=request.query, rewritten_queries=rewritten_queries, search_urls=search_urls, candidates=candidates, tutors=tutors, trace=trace)
@@ -77,6 +78,39 @@ class BrowserResearchService:
         limited = candidates[: max(1, min(request.max_candidates, 20))]
         trace.append(self._trace("Search Result Filter", "rank_candidate_links", "completed", f"候选链接过滤完成：{len(limited)} / {len(candidates)}"))
         return limited
+
+    def _discover_navigation_candidates(
+        self,
+        request: BrowserResearchRequest,
+        candidates: list[CandidateLink],
+        rewritten_queries: list[str],
+        allowed_domains: list[str],
+        trace: list[AgentTrace],
+    ) -> list[CandidateLink]:
+        if request.navigation_depth <= 0 or not candidates:
+            return candidates
+        result_filter = SearchResultFilter(ResultFilterConfig(allowed_domains=tuple(allowed_domains), threshold=4.0))
+        filter_query = " ".join([request.query, *rewritten_queries, "导师 教师 个人主页 研究方向"])
+        collected = {candidate.url: candidate for candidate in candidates}
+        navigation_pages = candidates[: max(1, min(request.max_navigation_pages, len(candidates)))]
+        discovered_count = 0
+        for page_candidate in navigation_pages:
+            try:
+                page = self.browser.fetch(page_candidate.url, use_playwright=request.use_playwright, actions=[])
+                page_candidate.status = "browsed"
+                trace.append(self._trace("Browser Agent", "navigate_candidate_page", "completed", f"导航访问候选入口：{page_candidate.url}"))
+            except Exception as exc:
+                page_candidate.error = str(exc)[:300]
+                trace.append(self._trace("Browser Agent", "navigate_candidate_page", "failed", f"导航入口失败：{page_candidate.url}", {"error": page_candidate.error}))
+                continue
+            for discovered in result_filter.filter_links(page.get("links", []), filter_query, page_candidate.url):
+                discovered.score += max(page_candidate.score * 0.2, 1.0)
+                if discovered.url not in collected:
+                    collected[discovered.url] = discovered
+                    discovered_count += 1
+        expanded = sorted(collected.values(), key=lambda item: item.score, reverse=True)[: max(1, min(request.max_candidates, 20))]
+        trace.append(self._trace("Browser Agent", "discover_navigation_links", "completed", f"导航式发现新增 {discovered_count} 个候选链接"))
+        return expanded
 
     def _browse_and_ingest(self, request: BrowserResearchRequest, candidates: list[CandidateLink], trace: list[AgentTrace]) -> list[TutorProfile]:
         tutors: list[TutorProfile] = []

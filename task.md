@@ -274,6 +274,8 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 支持搜索结果候选导师主页链接筛选和打分
 - [x] 支持批量浏览候选主页
 - [x] 支持将候选主页结构化为导师档案并写入 SQLite + ChromaDB
+- [x] 支持导航式信息采集第一版：搜索结果页 → 学院/师资入口页 → 导师主页
+- [x] 支持配置导航深度和最多导航页面数
 - [x] 新增 `/api/browser/research` 自动研究接口
 - [x] 前端支持自动搜索、候选链接、入库导师和研究 Trace 展示
 - [ ] 可选调研 Browser Use / Stagehand 集成
@@ -367,8 +369,9 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - 自动偏向 `edu.cn`、高校学院域名和可配置高校种子库，减少旅游、新闻、广告等无关结果。
 3. **搜索结果过滤器** `[已完成第一版]`
    - 用规则评分保留高质量候选：`edu.cn`、`导师`、`研究方向`、`招生` 加分，`旅游`、`酒店`、`新闻` 等扣分。
-4. **继续强化 Playwright Browser Agent**
-   - 当前已支持动态打开、等待、点击、滚动、DOM 抽取；后续重点是导航式采集：高校主页 → 学院主页 → 导师列表 → 导师主页 → 论文。
+4. **继续强化 Playwright Browser Agent** `[已完成导航式采集第一版]`
+   - 当前已支持动态打开、等待、点击、滚动、DOM 抽取，并已支持搜索结果页 → 学院/师资入口页 → 导师主页的一跳导航式采集。
+   - 后续重点是更深链路：高校主页 → 学院主页 → 导师列表分页 → 导师主页 → 论文。
 5. **更强 Embedding / Hybrid Retrieval / Reranker**
    - 替换 hashing embedding，增加 BM25 + Dense Retrieval，再接 reranker。
 
