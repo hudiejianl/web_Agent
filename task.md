@@ -301,8 +301,8 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 - [ ] 支持 BGE-M3 / bge-large-zh embedding
 - [ ] 支持 OpenAI / Claude 兼容 embedding API
-- [ ] 支持 BM25 关键词检索
-- [ ] 实现 Hybrid Retrieval：BM25 + Dense Retrieval
+- [x] 支持 BM25 关键词检索
+- [x] 实现 Hybrid Retrieval：BM25 + Dense Retrieval
 - [ ] 接入 reranker：bge-reranker / jina-reranker
 - [ ] 支持 chunking 策略
 - [ ] 支持论文、主页、招生信息分字段检索
@@ -372,8 +372,8 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 4. **继续强化 Playwright Browser Agent** `[已完成导航式采集第一版]`
    - 当前已支持动态打开、等待、点击、滚动、DOM 抽取，并已支持搜索结果页 → 学院/师资入口页 → 导师主页的一跳导航式采集。
    - 后续重点是更深链路：高校主页 → 学院主页 → 导师列表分页 → 导师主页 → 论文。
-5. **更强 Embedding / Hybrid Retrieval / Reranker**
-   - 替换 hashing embedding，增加 BM25 + Dense Retrieval，再接 reranker。
+5. **更强 Embedding / Hybrid Retrieval / Reranker** `[已完成 Hybrid Retrieval 第一版]`
+   - 已增加 BM25 + Dense Retrieval 融合排序；后续替换 hashing embedding，并接入 reranker。
 
 ### 第二阶段：Workflow 与 Memory 深化
 
