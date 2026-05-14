@@ -55,3 +55,44 @@ def test_browser_browse_endpoint(monkeypatch):
     payload = response.json()
     assert payload["used_playwright"] is True
     assert payload["dom"]["headings"][0]["text"] == "Demo"
+
+
+def test_browser_research_endpoint(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+    from app.services.browser_research import BrowserResearchService
+    from app.services.ingestion import IngestionService
+
+    def fake_fetch(self, url, use_playwright=False, actions=None):
+        if "search" in url:
+            return {
+                "url": url,
+                "title": "Search",
+                "text": "search results",
+                "links": [{"text": "张三 教授 个人主页", "url": "https://cs.example.edu.cn/teacher/zhangsan"}],
+            }
+        return {
+            "url": url,
+            "title": "张三 教授 - 示例大学",
+            "text": "张三 教授 示例大学 计算机学院 人工智能 多模态 zhangsan@example.edu.cn",
+            "links": [],
+        }
+
+    def fake_ingest_profile(self, profile):
+        profile.id = profile.id or "demo-tutor"
+        return profile
+
+    monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
+    monkeypatch.setattr(IngestionService, "ingest_profile", fake_ingest_profile)
+    monkeypatch.setattr(BrowserResearchService, "_build_search_urls", lambda self, request: ["https://example.com/search?q=demo"])
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/browser/research",
+        json={"query": "人工智能 多模态 导师", "max_search_pages": 1, "max_candidates": 3, "max_ingest": 1, "use_playwright": False},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["candidates"]
+    assert payload["tutors"]
+    assert payload["tutors"][0]["name"] == "张三"
+    assert any(item["agent"] == "Browser Agent" for item in payload["trace"])

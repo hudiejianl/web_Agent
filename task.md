@@ -4,7 +4,7 @@
 
 项目已完成一个可运行的 MVP：具备 FastAPI 后端、LangGraph 多智能体工作流、RAG 检索、ChromaDB 本地向量库、SQLite 存储、网页采集、长期记忆、Agent Trace 和本地演示页面。
 
-当前系统更准确地说是：**Agent / RAG / Memory / Trace 的工程骨架已经跑通，并已支持可选 LLM 调用；研究级检索、真实 Browser Automation 和评估系统仍需增强**。
+当前系统更准确地说是：**Agent / RAG / Memory / Trace 的工程骨架已经跑通，并已支持可选 LLM 调用、Playwright 动态浏览和 Autonomous Browser Research；研究级检索、评估系统和高级长期记忆仍需增强**。
 
 ---
 
@@ -267,7 +267,21 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 支持读取 DOM
 - [x] 支持从页面链接中发现候选导师主页线索
 - [x] 支持 Browser Agent API 返回浏览动作与 DOM 摘要
+- [x] 实现 Autonomous Browser Research Agent
+- [x] 支持根据关键词生成搜索入口
+- [x] 支持搜索结果候选导师主页链接筛选和打分
+- [x] 支持批量浏览候选主页
+- [x] 支持将候选主页结构化为导师档案并写入 SQLite + ChromaDB
+- [x] 新增 `/api/browser/research` 自动研究接口
+- [x] 前端支持自动搜索、候选链接、入库导师和研究 Trace 展示
 - [ ] 可选调研 Browser Use / Stagehand 集成
+
+当前限制：
+
+- 搜索入口目前基于 Bing / Baidu 搜索结果页，不调用官方 Search API
+- 候选链接筛选仍是启发式规则打分
+- 批量浏览默认限制候选数量，避免对公开网站造成过高请求压力
+- 不保证所有高校页面都能被静态或 Playwright 正确解析
 
 当前不会做：
 
@@ -341,14 +355,14 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 优先级最高的是：
 
-1. **配置真实 LLM API Key 并进行端到端验证**
-2. **增强 Planner 与多步执行能力**
-3. **接入 Playwright，实现真正 Browser Agent**
-4. **升级 RAG：BGE embedding + Hybrid Retrieval + reranker**
+1. **升级 RAG：BGE embedding + Hybrid Retrieval + reranker**
+2. **构建 evaluation dataset 与导师推荐评估指标**
+3. **增强 Planner 的状态持久化与用户补充约束后的重新规划**
+4. **接入 LangSmith / OpenTelemetry，持久化 Agent Trace**
 
 原因：
 
-项目已经支持可选 LLM 调用；下一步需要用真实 API Key 验证大模型生成效果，并把 Planner / Browser / RAG 做深，提升 Agent 味和研究味。
+项目已经支持可选 LLM 调用、结构化多步计划、Playwright 动态浏览和自主浏览研究闭环；下一步最值得把 RAG 与 Evaluation 做深，让推荐质量可衡量、可对比、可持续优化。
 
 LLM 配置示例：
 

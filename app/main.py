@@ -8,8 +8,9 @@ from fastapi.staticfiles import StaticFiles
 
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
-from app.models.schemas import BrowserBrowseRequest, BrowserBrowseResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, SearchResponse
+from app.models.schemas import BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, SearchResponse
 from app.rag.retriever import TutorRetriever
+from app.services.browser_research import BrowserResearchService
 from app.services.chat import ChatService
 from app.services.ingestion import IngestionService, ensure_seed_data
 from app.storage.database import init_database
@@ -55,6 +56,11 @@ def ingest_url(request: IngestUrlRequest) -> IngestUrlResponse:
 @app.post("/api/browser/browse", response_model=BrowserBrowseResponse)
 def browse(request: BrowserBrowseRequest) -> BrowserBrowseResponse:
     return BrowserAgent().browse(str(request.url), actions=request.actions) if request.use_playwright else BrowserBrowseResponse.model_validate(BrowserAgent().fetch(str(request.url)))
+
+
+@app.post("/api/browser/research", response_model=BrowserResearchResponse)
+def browser_research(request: BrowserResearchRequest) -> BrowserResearchResponse:
+    return BrowserResearchService().research(request)
 
 
 @app.get("/api/tutors/search", response_model=SearchResponse)

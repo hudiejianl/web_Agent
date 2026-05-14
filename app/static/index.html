@@ -44,6 +44,11 @@
       <p class="muted">使用 Playwright 打开网页、等待动态加载、读取 DOM；如果浏览器未安装会自动回退静态抓取。</p>
       <p><button onclick="browseUrl()">动态浏览并提取 DOM</button></p>
       <pre id="browserResult">暂无浏览结果</pre>
+      <h3>Autonomous Browser Research</h3>
+      <p class="muted">输入研究目标，系统会自动搜索候选导师主页、浏览页面、结构化并入库。</p>
+      <textarea id="researchQuery" rows="3">武汉 多模态 人工智能 导师 个人主页</textarea>
+      <p><button onclick="runBrowserResearch()">自动搜索并入库</button></p>
+      <pre id="researchResult">暂无自动研究结果</pre>
       <h3>任务计划</h3>
       <div id="plan" class="muted">暂无任务计划</div>
       <h3>候选导师</h3>
@@ -97,6 +102,26 @@
         links: (data.links || []).slice(0, 8),
         text_preview: (data.text || '').slice(0, 600)
       }, null, 2);
+    }
+
+    async function runBrowserResearch() {
+      const output = document.getElementById('researchResult');
+      output.textContent = 'Autonomous Browser Research Agent 正在搜索、筛选、浏览并入库...';
+      const res = await fetch('/api/browser/research', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({query: document.getElementById('researchQuery').value, max_search_pages: 1, max_candidates: 6, max_ingest: 3, use_playwright: true})
+      });
+      const data = await res.json();
+      if (!res.ok) { output.textContent = JSON.stringify(data, null, 2); return; }
+      output.textContent = JSON.stringify({
+        query: data.query,
+        search_urls: data.search_urls,
+        candidates: (data.candidates || []).map(item => ({text: item.text, url: item.url, score: item.score, reason: item.reason, status: item.status, error: item.error})),
+        ingested_tutors: (data.tutors || []).map(t => ({name: t.name, institution: t.institution, homepage: t.homepage, areas: t.research_areas})),
+        trace: (data.trace || []).map(item => `[${item.agent}] ${item.action}: ${item.status} - ${item.detail}`)
+      }, null, 2);
+      renderTrace(data.trace || []);
+      renderTutors(data.tutors || []);
     }
 
     function renderPlan(plan) {

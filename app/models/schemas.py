@@ -165,5 +165,33 @@ class BrowserBrowseResponse(BaseModel):
     error: str | None = None
 
 
+class CandidateLink(BaseModel):
+    text: str = ""
+    url: str
+    source_url: str | None = None
+    score: float = 0.0
+    reason: str = ""
+    status: Literal["pending", "browsed", "ingested", "failed", "skipped"] = "pending"
+    error: str | None = None
+
+
+class BrowserResearchRequest(BaseModel):
+    query: str
+    search_engine: Literal["bing", "baidu"] = "bing"
+    seed_urls: list[HttpUrl] = Field(default_factory=list)
+    max_search_pages: int = 1
+    max_candidates: int = 6
+    max_ingest: int = 3
+    use_playwright: bool = True
+
+
+class BrowserResearchResponse(BaseModel):
+    query: str
+    search_urls: list[str] = Field(default_factory=list)
+    candidates: list[CandidateLink] = Field(default_factory=list)
+    tutors: list[TutorProfile] = Field(default_factory=list)
+    trace: list[AgentTrace] = Field(default_factory=list)
+
+
 class SearchResponse(BaseModel):
     tutors: list[TutorProfile]
