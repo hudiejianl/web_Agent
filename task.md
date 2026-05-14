@@ -19,7 +19,7 @@
 - [x] 创建本地静态演示页面
 - [x] 创建测试目录与冒烟测试
 - [x] 使用 Conda 环境 `webagent` 安装完整依赖
-- [x] 运行测试并通过：`2 passed`
+- [x] 运行测试并通过：`6 passed`
 
 关键文件：
 
@@ -219,6 +219,8 @@
 - [x] Agent Trace 中显示 LLM 调用过程
 - [x] 已配置 DeepSeek OpenAI-compatible 调用：`LLM_PROVIDER=openai-compatible`，`LLM_MODEL=deepseek-v4-flash`
 - [x] 测试环境默认禁用真实 LLM，避免 pytest 消耗 API 额度
+- [x] 为 Query Rewriter 和搜索结果过滤器增加直接单元测试
+- [x] 将 FastAPI startup 迁移到 lifespan，消除 `on_event` 弃用警告
 
 预期效果：
 

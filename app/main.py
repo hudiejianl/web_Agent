@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from functools import lru_cache
 
 from fastapi import FastAPI
@@ -17,19 +18,22 @@ from app.storage.database import init_database
 from app.storage.repositories import MemoryRepository
 
 settings = get_settings()
-app = FastAPI(title=settings.app_name)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_database()
+    ensure_seed_data()
+    yield
+
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 @lru_cache
 def get_chat_service() -> ChatService:
     return ChatService()
-
-
-@app.on_event("startup")
-def startup() -> None:
-    init_database()
-    ensure_seed_data()
 
 
 @app.get("/")
