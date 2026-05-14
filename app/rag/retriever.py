@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from app.models.schemas import TutorProfile
 from app.rag.bm25 import BM25Retriever
+from app.rag.reranker import TutorReranker
 from app.rag.vector_store import VectorStore
 from app.storage.repositories import TutorRepository
 
 
 class TutorRetriever:
-    def __init__(self, repository: TutorRepository | None = None, vector_store: VectorStore | None = None):
+    def __init__(self, repository: TutorRepository | None = None, vector_store: VectorStore | None = None, reranker: TutorReranker | None = None):
         self.repository = repository or TutorRepository()
         self.vector_store = vector_store or VectorStore()
+        self.reranker = reranker or TutorReranker()
 
     def search(self, query: str, limit: int = 5) -> list[TutorProfile]:
         candidate_limit = max(limit * 3, 10)
@@ -19,8 +21,8 @@ class TutorRetriever:
         bm25_results = BM25Retriever(all_profiles).search(query, limit=candidate_limit)
         merged = self._merge_results(dense_profiles, bm25_results)
         if merged:
-            return merged[:limit]
-        return self._keyword_search(query, limit, all_profiles)
+            return self.reranker.rerank(query, merged, limit=limit)
+        return self.reranker.rerank(query, self._keyword_search(query, candidate_limit, all_profiles), limit=limit)
 
     def _merge_results(self, dense_profiles: list[TutorProfile], bm25_results: list[tuple[TutorProfile, float]]) -> list[TutorProfile]:
         scores: dict[str, float] = {}

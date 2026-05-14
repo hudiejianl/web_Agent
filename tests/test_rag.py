@@ -1,5 +1,6 @@
 from app.models.schemas import TutorProfile
 from app.rag.bm25 import BM25Retriever
+from app.rag.reranker import TutorReranker
 from app.rag.retriever import TutorRetriever
 
 
@@ -16,7 +17,24 @@ def test_bm25_prioritizes_keyword_matches():
     assert all(profile.id != "vision" for profile, _ in results)
 
 
-def test_hybrid_retriever_merges_dense_and_bm25_results():
+def test_reranker_prioritizes_query_aligned_profiles():
+    generic = TutorProfile(id="generic", name="王五", institution="示例大学", research_areas=["机器学习"], summary="机器学习")
+    aligned = TutorProfile(
+        id="aligned",
+        name="赵六",
+        institution="示例大学",
+        location="武汉",
+        research_areas=["多模态", "人工智能"],
+        admission_directions=["硕士招生"],
+        summary="多模态人工智能导师",
+    )
+
+    results = TutorReranker().rerank("武汉 多模态 人工智能 硕士 导师", [generic, aligned], limit=2)
+
+    assert [profile.id for profile in results] == ["aligned", "generic"]
+
+
+def test_hybrid_retriever_merges_dense_bm25_and_reranker_results():
     dense_only = TutorProfile(id="dense", name="王五", institution="示例大学", research_areas=["机器学习"], summary="机器学习")
     keyword_match = TutorProfile(id="keyword", name="赵六", institution="示例大学", research_areas=["多模态", "人工智能"], summary="多模态人工智能导师")
 
