@@ -179,6 +179,8 @@ class BrowserResearchRequest(BaseModel):
     query: str
     search_engine: Literal["bing", "baidu"] = "bing"
     seed_urls: list[HttpUrl] = Field(default_factory=list)
+    allowed_domains: list[str] = Field(default_factory=list)
+    max_queries: int = 5
     max_search_pages: int = 1
     max_candidates: int = 6
     max_ingest: int = 3
@@ -187,6 +189,7 @@ class BrowserResearchRequest(BaseModel):
 
 class BrowserResearchResponse(BaseModel):
     query: str
+    rewritten_queries: list[str] = Field(default_factory=list)
     search_urls: list[str] = Field(default_factory=list)
     candidates: list[CandidateLink] = Field(default_factory=list)
     tutors: list[TutorProfile] = Field(default_factory=list)

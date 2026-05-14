@@ -115,6 +115,7 @@
       if (!res.ok) { output.textContent = JSON.stringify(data, null, 2); return; }
       output.textContent = JSON.stringify({
         query: data.query,
+        rewritten_queries: data.rewritten_queries,
         search_urls: data.search_urls,
         candidates: (data.candidates || []).map(item => ({text: item.text, url: item.url, score: item.score, reason: item.reason, status: item.status, error: item.error})),
         ingested_tutors: (data.tutors || []).map(t => ({name: t.name, institution: t.institution, homepage: t.homepage, areas: t.research_areas})),

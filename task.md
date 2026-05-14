@@ -353,16 +353,41 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 ## 当前推荐下一步
 
-优先级最高的是：
+下一阶段按 **优先级、技术收益、简历价值、Agent 含量** 排序。
 
-1. **升级 RAG：BGE embedding + Hybrid Retrieval + reranker**
-2. **构建 evaluation dataset 与导师推荐评估指标**
-3. **增强 Planner 的状态持久化与用户补充约束后的重新规划**
-4. **接入 LangSmith / OpenTelemetry，持久化 Agent Trace**
+### 立刻做：把“能用”升级成“真正 Agent”
+
+1. **Query Rewriter** `[已完成第一版]`
+   - 用户问题不直接搜索，先由 Agent 改写成多条面向高校/导师主页的搜索 Query。
+   - 示例：`帮我找武汉计算机方向导师` → `site:edu.cn 武汉 计算机学院 导师`、`site:hust.edu.cn 人工智能 导师`。
+   - 已实现 LLM + 规则 fallback，后续升级 query expansion / multi-query retrieval / search planning。
+2. **搜索域限制** `[已完成第一版]`
+   - 自动偏向 `edu.cn`、高校学院域名和可配置高校种子库，减少旅游、新闻、广告等无关结果。
+3. **搜索结果过滤器** `[已完成第一版]`
+   - 用规则评分保留高质量候选：`edu.cn`、`导师`、`研究方向`、`招生` 加分，`旅游`、`酒店`、`新闻` 等扣分。
+4. **继续强化 Playwright Browser Agent**
+   - 当前已支持动态打开、等待、点击、滚动、DOM 抽取；后续重点是导航式采集：高校主页 → 学院主页 → 导师列表 → 导师主页 → 论文。
+5. **更强 Embedding / Hybrid Retrieval / Reranker**
+   - 替换 hashing embedding，增加 BM25 + Dense Retrieval，再接 reranker。
+
+### 第二阶段：Workflow 与 Memory 深化
+
+6. Planner Agent 升级为真正任务拆解：搜索导师 → 检查论文 → 分析研究方向 → 判断是否招生 → 综合评分。
+7. 长期记忆升级为 Episodic / Semantic / Procedural Memory。
+8. 上下文压缩升级为独立 `memory/compression.py`，支持滑动窗口与语义摘要。
+9. 多 Agent 共享状态与通信增强。
+
+### 第三阶段：工程化与科研味
+
+10. Agent Trace 持久化与可视化，后续接 LangSmith / OpenTelemetry。
+11. RAG Evaluation：Recall、Precision、Faithfulness、Relevance。
+12. Benchmark Dataset：自建导师推荐测试集。
+13. React / Next.js 前端与 Workflow UI。
+14. Docker 部署与配置系统完善。
 
 原因：
 
-项目已经支持可选 LLM 调用、结构化多步计划、Playwright 动态浏览和自主浏览研究闭环；下一步最值得把 RAG 与 Evaluation 做深，让推荐质量可衡量、可对比、可持续优化。
+项目已经支持可选 LLM 调用、结构化多步计划、Playwright 动态浏览和自主浏览研究闭环；接下来不应继续堆散功能，而应提升 Agent 自主性、检索质量、Browser 能力、Workflow 深度、工程完整性和 Evaluation 能力。
 
 LLM 配置示例：
 

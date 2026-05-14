@@ -83,7 +83,7 @@ def test_browser_research_endpoint(monkeypatch):
 
     monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
     monkeypatch.setattr(IngestionService, "ingest_profile", fake_ingest_profile)
-    monkeypatch.setattr(BrowserResearchService, "_build_search_urls", lambda self, request: ["https://example.com/search?q=demo"])
+    monkeypatch.setattr(BrowserResearchService, "_build_search_urls", lambda self, request, rewritten_queries: ["https://example.com/search?q=demo"])
 
     client = TestClient(app)
     response = client.post(
@@ -92,7 +92,9 @@ def test_browser_research_endpoint(monkeypatch):
     )
     assert response.status_code == 200
     payload = response.json()
+    assert payload["rewritten_queries"]
     assert payload["candidates"]
     assert payload["tutors"]
     assert payload["tutors"][0]["name"] == "张三"
+    assert any(item["agent"] == "Query Rewriter Agent" for item in payload["trace"])
     assert any(item["agent"] == "Browser Agent" for item in payload["trace"])
