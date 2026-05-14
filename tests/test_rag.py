@@ -1,5 +1,6 @@
 from app.models.schemas import TutorProfile
 from app.rag.bm25 import BM25Retriever
+from app.rag.evidence import RetrievalEvidenceBuilder
 from app.rag.reranker import TutorReranker
 from app.rag.retriever import TutorRetriever
 
@@ -15,6 +16,26 @@ def test_bm25_prioritizes_keyword_matches():
     assert results[0][0].id == "rag"
     assert results[0][1] > 0
     assert all(profile.id != "vision" for profile, _ in results)
+
+
+def test_retrieval_evidence_builder_highlights_matching_fields():
+    profile = TutorProfile(
+        id="tutor-1",
+        name="张三",
+        institution="示例大学",
+        location="武汉",
+        homepage="https://example.edu.cn/zhangsan",
+        research_areas=["多模态", "人工智能"],
+        admission_directions=["硕士招生"],
+        summary="长期研究多模态人工智能。",
+    )
+
+    evidence = RetrievalEvidenceBuilder().build("武汉 多模态 人工智能 硕士 导师", [profile])
+
+    assert evidence
+    assert evidence[0].tutor_name == "张三"
+    assert any(item.field == "research_areas" for item in evidence)
+    assert any("**" in item.snippet for item in evidence)
 
 
 def test_reranker_prioritizes_query_aligned_profiles():

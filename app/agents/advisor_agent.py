@@ -1,17 +1,25 @@
 from __future__ import annotations
 
 from app.llm.provider import LLMResult, get_llm_client
-from app.models.schemas import AgentPlan, MemoryState, TutorProfile
+from app.models.schemas import AgentPlan, MemoryState, RetrievalEvidence, TutorProfile
 
 
 class AdvisorAgent:
-    def answer(self, message: str, tutors: list[TutorProfile], memory: MemoryState, plan: AgentPlan | None = None) -> tuple[str, LLMResult]:
-        llm_result = self._llm_answer(message, tutors, memory, plan)
+    def answer(
+        self,
+        message: str,
+        tutors: list[TutorProfile],
+        memory: MemoryState,
+        plan: AgentPlan | None = None,
+        retrieval_evidence: list[RetrievalEvidence] | None = None,
+    ) -> tuple[str, LLMResult]:
+        retrieval_evidence = retrieval_evidence or []
+        llm_result = self._llm_answer(message, tutors, memory, plan, retrieval_evidence)
         if llm_result.content:
             return llm_result.content, llm_result
-        return self._rule_answer(message, tutors, memory), llm_result
+        return self._rule_answer(message, tutors, memory, retrieval_evidence), llm_result
 
-    def _rule_answer(self, message: str, tutors: list[TutorProfile], memory: MemoryState) -> str:
+    def _rule_answer(self, message: str, tutors: list[TutorProfile], memory: MemoryState, retrieval_evidence: list[RetrievalEvidence]) -> str:
         if not tutors:
             return (
                 "我还没有检索到足够匹配的导师资料。你可以提供导师主页 URL，或补充目标方向、学校层次、地区偏好，"
@@ -23,7 +31,8 @@ class AdvisorAgent:
         for index, tutor in enumerate(tutors[:5], start=1):
             areas = "、".join(tutor.research_areas) or "未标注"
             directions = "、".join(tutor.admission_directions) or "未标注"
-            evidence = tutor.evidence[0].snippet if tutor.evidence else tutor.summary
+            matched_evidence = [item for item in retrieval_evidence if item.tutor_id == tutor.id][:2]
+            evidence = "；".join(f"{item.field}: {item.snippet}" for item in matched_evidence) or (tutor.evidence[0].snippet if tutor.evidence else tutor.summary)
             lines.extend(
                 [
                     f"\n{index}. {tutor.name}（{tutor.institution}，{tutor.title or '导师'}）",
@@ -35,7 +44,14 @@ class AdvisorAgent:
         lines.append("\n下一步建议：确认目标院校层次、准备套磁邮件，并逐一核对导师主页的最新招生状态。")
         return "\n".join(lines)
 
-    def _llm_answer(self, message: str, tutors: list[TutorProfile], memory: MemoryState, plan: AgentPlan | None) -> LLMResult:
+    def _llm_answer(
+        self,
+        message: str,
+        tutors: list[TutorProfile],
+        memory: MemoryState,
+        plan: AgentPlan | None,
+        retrieval_evidence: list[RetrievalEvidence],
+    ) -> LLMResult:
         if not tutors:
             return get_llm_client().complete(
                 system="你是一个升学规划 Research Agent。回答必须诚实说明当前资料不足，并给出下一步采集信息建议。",
@@ -58,6 +74,7 @@ class AdvisorAgent:
             }
             for tutor in tutors[:5]
         ]
+        evidence_payload = [item.model_dump() for item in retrieval_evidence[:12]]
         plan_payload = plan.model_dump() if plan else {}
         system = (
             "你是一个严谨的升学 Research Agent，负责根据用户画像、任务计划、导师候选和证据生成个性化导师推荐。"
@@ -67,6 +84,7 @@ class AdvisorAgent:
             f"用户问题：{message}\n"
             f"用户画像：{memory.profile.model_dump()}\n"
             f"任务计划：{plan_payload}\n"
+            f"分字段检索证据：{evidence_payload}\n"
             f"候选导师资料：{tutor_payload}"
         )
         return get_llm_client().complete(system=system, user=user, max_tokens=1400)

@@ -20,6 +20,16 @@ class Evidence(BaseModel):
     snippet: str
 
 
+class RetrievalEvidence(BaseModel):
+    tutor_id: str
+    tutor_name: str
+    field: str
+    snippet: str
+    matched_terms: list[str] = Field(default_factory=list)
+    source_url: str | None = None
+    score: float = 0.0
+
+
 class Paper(BaseModel):
     title: str
     year: int | None = None
@@ -127,6 +137,7 @@ class ChatResponse(BaseModel):
     answer: str
     plan: AgentPlan
     tutors: list[TutorProfile] = Field(default_factory=list)
+    retrieval_evidence: list[RetrievalEvidence] = Field(default_factory=list)
     memory: MemoryState
     trace: list[AgentTrace] = Field(default_factory=list)
 

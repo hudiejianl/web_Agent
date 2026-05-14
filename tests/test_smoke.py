@@ -24,6 +24,8 @@ def test_chat_returns_tutor_recommendations():
     payload = response.json()
     assert "建议" in payload["answer"] or "关注" in payload["answer"]
     assert payload["tutors"]
+    assert payload["retrieval_evidence"]
+    assert any("**" in item["snippet"] for item in payload["retrieval_evidence"])
     assert payload["plan"]["steps"]
     assert payload["trace"]
     assert any(item["agent"] == "Planner Agent" for item in payload["trace"])

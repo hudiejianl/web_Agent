@@ -19,6 +19,7 @@ class ChatService:
             answer=state["answer"],
             plan=state["plan"],
             tutors=state.get("tutors", []),
+            retrieval_evidence=state.get("retrieval_evidence", []),
             memory=state["memory"],
             trace=state.get("trace", []),
         )

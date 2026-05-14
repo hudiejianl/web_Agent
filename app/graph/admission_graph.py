@@ -7,7 +7,8 @@ from langgraph.graph import END, StateGraph
 from app.agents.advisor_agent import AdvisorAgent
 from app.agents.memory_agent import MemoryAgent
 from app.agents.planner_agent import PlannerAgent
-from app.models.schemas import AgentPlan, AgentTrace, MemoryState, TutorProfile
+from app.models.schemas import AgentPlan, AgentTrace, MemoryState, RetrievalEvidence, TutorProfile
+from app.rag.evidence import RetrievalEvidenceBuilder
 from app.rag.retriever import TutorRetriever
 from app.services.ingestion import IngestionService
 
@@ -18,6 +19,7 @@ class AdmissionState(TypedDict, total=False):
     memory: MemoryState
     plan: AgentPlan
     tutors: list[TutorProfile]
+    retrieval_evidence: list[RetrievalEvidence]
     ingested_tutors: list[TutorProfile]
     answer: str
     trace: list[AgentTrace]
@@ -28,6 +30,7 @@ class AdmissionGraph:
         self.memory_agent = MemoryAgent()
         self.planner_agent = PlannerAgent()
         self.retriever = TutorRetriever()
+        self.evidence_builder = RetrievalEvidenceBuilder()
         self.ingestion = IngestionService()
         self.advisor = AdvisorAgent()
         self.graph = self._build()
@@ -111,9 +114,14 @@ class AdmissionGraph:
         profile_terms = " ".join(memory.profile.research_interests + memory.profile.preferred_locations)
         query = f"{state['message']} {profile_terms} {memory.profile.target_degree or ''}"
         state["tutors"] = self.retriever.search(query, limit=5)
+        state["retrieval_evidence"] = self.evidence_builder.build(query, state["tutors"])
         retrieve_step = self._mark_step(state, "RAG Retriever", "completed")
         if retrieve_step:
-            retrieve_step.outputs = {"result_count": len(state["tutors"]), "tutors": [tutor.name for tutor in state["tutors"]]}
+            retrieve_step.outputs = {
+                "result_count": len(state["tutors"]),
+                "tutors": [tutor.name for tutor in state["tutors"]],
+                "evidence_count": len(state["retrieval_evidence"]),
+            }
         research_step = self._mark_step(state, "Research Agent", "completed" if state["tutors"] else "skipped")
         if research_step:
             research_step.outputs = {"analyzed_count": len(state["tutors"])}
@@ -122,8 +130,8 @@ class AdmissionGraph:
             "RAG Retriever",
             "retrieve_tutors",
             "completed",
-            f"基于用户问题和长期偏好召回 {len(state['tutors'])} 位候选导师",
-            {"result_count": len(state["tutors"])},
+            f"基于用户问题和长期偏好召回 {len(state['tutors'])} 位候选导师，形成 {len(state['retrieval_evidence'])} 条分字段证据",
+            {"result_count": len(state["tutors"]), "evidence_count": len(state["retrieval_evidence"])},
         )
         self._trace(
             state,
@@ -136,7 +144,13 @@ class AdmissionGraph:
 
     def _advise(self, state: AdmissionState) -> AdmissionState:
         self._mark_step(state, "Advisor Agent", "running")
-        state["answer"], llm_result = self.advisor.answer(state["message"], state.get("tutors", []), state["memory"], state.get("plan"))
+        state["answer"], llm_result = self.advisor.answer(
+            state["message"],
+            state.get("tutors", []),
+            state["memory"],
+            state.get("plan"),
+            state.get("retrieval_evidence", []),
+        )
         if llm_result.used_fallback:
             self._trace(
                 state,

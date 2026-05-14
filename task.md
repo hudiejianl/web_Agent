@@ -306,8 +306,8 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 接入本地轻量 reranker 第一版
 - [ ] 接入模型 reranker：bge-reranker / jina-reranker
 - [ ] 支持 chunking 策略
-- [ ] 支持论文、主页、招生信息分字段检索
-- [ ] 支持引用证据高亮
+- [x] 支持论文、主页、招生信息分字段检索证据
+- [x] 支持引用证据高亮
 
 ---
 

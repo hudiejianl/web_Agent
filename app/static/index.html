@@ -32,6 +32,8 @@
       <textarea id="message" rows="5">我想申请 AI 和 RAG 方向硕士，偏好江浙沪，帮我推荐导师。</textarea>
       <p><button onclick="sendChat()">发送咨询</button></p>
       <pre id="answer">等待输入...</pre>
+      <h3>检索证据</h3>
+      <div id="retrievalEvidence" class="muted">暂无检索证据</div>
       <h3>Agent Trace</h3>
       <div id="trace" class="muted">暂无执行轨迹</div>
     </section>
@@ -69,6 +71,7 @@
       const data = await res.json();
       answer.textContent = data.answer + '\n\n长期记忆：' + JSON.stringify(data.memory.profile, null, 2);
       renderPlan(data.plan);
+      renderEvidence(data.retrieval_evidence || []);
       renderTrace(data.trace || []);
       renderTutors(data.tutors || []);
     }
@@ -141,6 +144,17 @@
           </div>
         </div>
       `).join('') || '<p class="muted">暂无任务计划</p>';
+    }
+
+    function renderEvidence(items) {
+      document.getElementById('retrievalEvidence').innerHTML = items.map(item => `
+        <div class="trace">
+          <strong>${item.tutor_name} · ${item.field}</strong>
+          <span class="badge">${item.score.toFixed ? item.score.toFixed(1) : item.score}</span><br />
+          <span>${item.snippet}</span><br />
+          <span class="muted">匹配词：${(item.matched_terms || []).join('、') || '无'}${item.source_url ? ' · 来源：' + item.source_url : ''}</span>
+        </div>
+      `).join('') || '<p class="muted">暂无检索证据</p>';
     }
 
     function renderTrace(items) {
