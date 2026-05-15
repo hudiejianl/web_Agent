@@ -39,6 +39,7 @@ class AdmissionGraph:
         return self.graph.invoke({"session_id": session_id, "message": message})
 
     def _build(self):
+        # 主工作流按“记忆 → 规划 → 检索/采集 → 建议 → 更新记忆”串联。
         graph = StateGraph(AdmissionState)
         graph.add_node("load_memory_node", self._load_memory)
         graph.add_node("plan_node", self._plan)

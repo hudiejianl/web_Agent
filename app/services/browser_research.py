@@ -9,8 +9,10 @@ from app.agents.research_agent import ResearchAgent
 from app.models.schemas import AgentTrace, BrowserResearchRequest, BrowserResearchResponse, CandidateLink, TutorProfile
 from app.search.result_filter import ResultFilterConfig, SearchResultFilter
 from app.services.ingestion import IngestionService
+from app.storage.repositories import TraceRepository
 
 
+# BrowserResearchService 编排“改写搜索词 → 搜索入口 → 导航发现 → 结构化入库”的自主研究流程。
 class BrowserResearchService:
     def __init__(
         self,
@@ -23,6 +25,7 @@ class BrowserResearchService:
         self.researcher = researcher or ResearchAgent()
         self.ingestion = ingestion or IngestionService()
         self.query_rewriter = query_rewriter or QueryRewriter()
+        self.traces = TraceRepository()
 
     def research(self, request: BrowserResearchRequest) -> BrowserResearchResponse:
         trace: list[AgentTrace] = []
@@ -36,7 +39,16 @@ class BrowserResearchService:
         candidates = self._discover_navigation_candidates(request, candidates, rewritten_queries, allowed_domains, trace)
         tutors = self._browse_and_ingest(request, candidates, trace)
         trace.append(self._trace("Advisor Agent", "summarize_research", "completed", f"筛选 {len(candidates)} 个候选链接，入库 {len(tutors)} 位导师"))
-        return BrowserResearchResponse(query=request.query, rewritten_queries=rewritten_queries, search_urls=search_urls, candidates=candidates, tutors=tutors, trace=trace)
+        trace_run = self.traces.save(session_id="browser-research", source="browser_research", trace=trace)
+        return BrowserResearchResponse(
+            query=request.query,
+            trace_id=trace_run.trace_id,
+            rewritten_queries=rewritten_queries,
+            search_urls=search_urls,
+            candidates=candidates,
+            tutors=tutors,
+            trace=trace,
+        )
 
     def _build_search_urls(self, request: BrowserResearchRequest, rewritten_queries: list[str]) -> list[str]:
         urls = [str(url) for url in request.seed_urls]

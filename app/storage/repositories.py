@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from uuid import uuid5, NAMESPACE_URL
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
-from app.models.schemas import MemoryState, TutorProfile
+from app.models.schemas import AgentTrace, AgentTraceRun, MemoryState, TutorProfile
 from app.storage.database import get_connection
 
 
 def tutor_id_for(profile: TutorProfile) -> str:
+    # 用主页或机构姓名生成稳定 ID，避免重复采集同一导师时产生多条记录。
     key = profile.homepage or f"{profile.institution}:{profile.name}:{profile.department or ''}"
     return str(uuid5(NAMESPACE_URL, key))
 
@@ -43,6 +44,35 @@ class TutorRepository:
         with get_connection() as connection:
             row = connection.execute("SELECT payload FROM tutors WHERE id = ?", (tutor_id,)).fetchone()
         return TutorProfile.model_validate_json(row["payload"]) if row else None
+
+
+class TraceRepository:
+    # Trace 按运行批次整体保存，便于通过 trace_id 复盘一次 Agent 执行。
+    def save(self, session_id: str, source: str, trace: list[AgentTrace]) -> AgentTraceRun:
+        run = AgentTraceRun(trace_id=str(uuid4()), session_id=session_id, source=source, trace=trace)
+        with get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO agent_traces (trace_id, session_id, source, payload, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (run.trace_id, run.session_id, run.source, run.model_dump_json(), run.created_at.isoformat()),
+            )
+            connection.commit()
+        return run
+
+    def get(self, trace_id: str) -> AgentTraceRun | None:
+        with get_connection() as connection:
+            row = connection.execute("SELECT payload FROM agent_traces WHERE trace_id = ?", (trace_id,)).fetchone()
+        return AgentTraceRun.model_validate_json(row["payload"]) if row else None
+
+    def list_by_session(self, session_id: str, limit: int = 20) -> list[AgentTraceRun]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM agent_traces WHERE session_id = ? ORDER BY created_at DESC LIMIT ?",
+                (session_id, limit),
+            ).fetchall()
+        return [AgentTraceRun.model_validate_json(row["payload"]) for row in rows]
 
 
 class MemoryRepository:

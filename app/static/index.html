@@ -73,7 +73,7 @@
         body: JSON.stringify({session_id: sessionId, message: document.getElementById('message').value})
       });
       const data = await res.json();
-      answer.textContent = data.answer + '\n\n长期记忆：' + JSON.stringify(data.memory.profile, null, 2);
+      answer.textContent = data.answer + '\n\nTrace ID：' + (data.trace_id || '未保存') + '\n\n长期记忆：' + JSON.stringify(data.memory.profile, null, 2);
       renderPlan(data.plan);
       renderEvidence(data.retrieval_evidence || []);
       renderTrace(data.trace || []);
@@ -130,6 +130,7 @@
       if (!res.ok) { output.textContent = JSON.stringify(data, null, 2); return; }
       output.textContent = JSON.stringify({
         query: data.query,
+        trace_id: data.trace_id,
         rewritten_queries: data.rewritten_queries,
         search_urls: data.search_urls,
         candidates: (data.candidates || []).map(item => ({text: item.text, url: item.url, score: item.score, reason: item.reason, status: item.status, error: item.error})),
@@ -174,6 +175,7 @@
         <div class="trace">
           <strong>[${item.agent}] ${item.action}</strong>
           <span class="badge">${item.status}</span><br />
+          <span class="muted">${new Date(item.timestamp).toLocaleString()}</span><br />
           <span>${item.detail}</span>
         </div>
       `).join('') || '<p class="muted">暂无执行轨迹</p>';

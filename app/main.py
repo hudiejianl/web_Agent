@@ -3,20 +3,20 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
-from app.models.schemas import BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, SearchResponse
+from app.models.schemas import BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, SearchResponse, AgentTraceRun, TraceRunResponse
 from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
 from app.services.browser_research import BrowserResearchService
 from app.services.chat import ChatService
 from app.services.ingestion import IngestionService, ensure_seed_data
 from app.storage.database import init_database
-from app.storage.repositories import MemoryRepository
+from app.storage.repositories import MemoryRepository, TraceRepository
 
 settings = get_settings()
 
@@ -86,6 +86,19 @@ def compare_rag(limit: int = 5) -> RAGEvaluationComparisonResponse:
 @app.get("/api/eval/rag/report", response_model=RAGEvaluationReportResponse)
 def report_rag(limit: int = 5) -> RAGEvaluationReportResponse:
     return RAGEvaluator().report(limit=limit)
+
+
+@app.get("/api/traces/{trace_id}", response_model=AgentTraceRun)
+def get_trace(trace_id: str) -> AgentTraceRun:
+    trace = TraceRepository().get(trace_id)
+    if trace is None:
+        raise HTTPException(status_code=404, detail="Trace not found")
+    return trace
+
+
+@app.get("/api/traces/session/{session_id}", response_model=TraceRunResponse)
+def list_session_traces(session_id: str, limit: int = 20) -> TraceRunResponse:
+    return TraceRunResponse(runs=TraceRepository().list_by_session(session_id, limit=limit))
 
 
 @app.get("/api/memory/{session_id}")

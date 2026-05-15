@@ -23,12 +23,23 @@ def test_chat_returns_tutor_recommendations():
     assert response.status_code == 200
     payload = response.json()
     assert "建议" in payload["answer"] or "关注" in payload["answer"]
+    assert payload["trace_id"]
     assert payload["tutors"]
     assert payload["retrieval_evidence"]
     assert any("**" in item["snippet"] for item in payload["retrieval_evidence"])
     assert payload["plan"]["steps"]
     assert payload["trace"]
     assert any(item["agent"] == "Planner Agent" for item in payload["trace"])
+
+    trace_response = client.get(f"/api/traces/{payload['trace_id']}")
+    assert trace_response.status_code == 200
+    trace_payload = trace_response.json()
+    assert trace_payload["source"] == "chat"
+    assert trace_payload["trace"]
+
+    session_traces_response = client.get("/api/traces/session/test-session")
+    assert session_traces_response.status_code == 200
+    assert any(item["trace_id"] == payload["trace_id"] for item in session_traces_response.json()["runs"])
 
 
 def test_rag_evaluation_endpoint():
@@ -148,6 +159,7 @@ def test_browser_research_endpoint(monkeypatch):
     )
     assert response.status_code == 200
     payload = response.json()
+    assert payload["trace_id"]
     assert payload["rewritten_queries"]
     assert payload["candidates"]
     assert payload["tutors"]
@@ -155,3 +167,7 @@ def test_browser_research_endpoint(monkeypatch):
     assert any(item["agent"] == "Query Rewriter Agent" for item in payload["trace"])
     assert any(item["action"] == "discover_navigation_links" for item in payload["trace"])
     assert any(item["agent"] == "Browser Agent" for item in payload["trace"])
+
+    trace_response = client.get(f"/api/traces/{payload['trace_id']}")
+    assert trace_response.status_code == 200
+    assert trace_response.json()["source"] == "browser_research"

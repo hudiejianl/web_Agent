@@ -6,6 +6,7 @@ from pathlib import Path
 from app.config import get_settings
 
 
+# SQLite 作为本地演示存储，保存导师档案、长期记忆、会话消息和 Agent Trace。
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS tutors (
     id TEXT PRIMARY KEY,
@@ -27,6 +28,17 @@ CREATE TABLE IF NOT EXISTS conversations (
     content TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS agent_traces (
+    trace_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    source TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_traces_session_created
+ON agent_traces (session_id, created_at DESC);
 """
 
 

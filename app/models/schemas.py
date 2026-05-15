@@ -39,6 +39,7 @@ class Paper(BaseModel):
     abstract: str | None = None
 
 
+# 导师档案是检索、推荐、网页采集入库共用的核心数据结构。
 class TutorProfile(BaseModel):
     id: str | None = None
     name: str
@@ -59,6 +60,7 @@ class TutorProfile(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     def document_text(self) -> str:
+        # 向量检索和 BM25 都基于这段聚合文本建立导师可检索文档。
         papers = "；".join(p.title for p in self.papers[:8])
         evidence = "；".join(item.snippet for item in self.evidence[:5])
         return "\n".join(
@@ -87,6 +89,7 @@ class UserProfile(BaseModel):
     constraints: list[str] = Field(default_factory=list)
 
 
+# 长期记忆保存用户画像、近期对话和压缩摘要，用于多轮咨询上下文延续。
 class MemoryState(BaseModel):
     session_id: str
     profile: UserProfile = Field(default_factory=UserProfile)
@@ -118,6 +121,7 @@ class AgentPlan(BaseModel):
     urls: list[str] = Field(default_factory=list)
 
 
+# AgentTrace 记录一次请求中每个智能体节点的执行轨迹，后续会持久化用于调试和展示。
 class AgentTrace(BaseModel):
     agent: str
     action: str
@@ -127,6 +131,15 @@ class AgentTrace(BaseModel):
     metadata: dict[str, str | int | float | bool] = Field(default_factory=dict)
 
 
+# AgentTraceRun 表示一次请求的完整轨迹，可通过 trace_id 从数据库回查。
+class AgentTraceRun(BaseModel):
+    trace_id: str
+    session_id: str = "default"
+    source: str
+    trace: list[AgentTrace] = Field(default_factory=list)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class ChatRequest(BaseModel):
     message: str
     session_id: str = "default"
@@ -134,6 +147,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     session_id: str
+    trace_id: str = ""
     answer: str
     plan: AgentPlan
     tutors: list[TutorProfile] = Field(default_factory=list)
@@ -202,6 +216,7 @@ class BrowserResearchRequest(BaseModel):
 
 class BrowserResearchResponse(BaseModel):
     query: str
+    trace_id: str = ""
     rewritten_queries: list[str] = Field(default_factory=list)
     search_urls: list[str] = Field(default_factory=list)
     candidates: list[CandidateLink] = Field(default_factory=list)
@@ -211,6 +226,10 @@ class BrowserResearchResponse(BaseModel):
 
 class SearchResponse(BaseModel):
     tutors: list[TutorProfile]
+
+
+class TraceRunResponse(BaseModel):
+    runs: list[AgentTraceRun] = Field(default_factory=list)
 
 
 class RAGEvaluationCase(BaseModel):
