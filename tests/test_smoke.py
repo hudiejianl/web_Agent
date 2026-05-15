@@ -9,8 +9,9 @@ from app.main import app
 
 def test_health():
     client = TestClient(app)
-    response = client.get("/api/health")
+    response = client.get("/api/health", headers={"X-Request-ID": "test-request-id"})
     assert response.status_code == 200
+    assert response.headers["X-Request-ID"] == "test-request-id"
     assert response.json()["status"] == "ok"
 
 

@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     database_path: str = "data/runtime/admission_agent.sqlite3"
     chroma_path: str = "data/runtime/chroma"
     chroma_collection: str = "tutors"
+    log_level: str = "INFO"
     embedding_model: str = "hashing"
     llm_provider: str = "none"
     llm_model: str = ""
