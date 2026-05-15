@@ -7,7 +7,8 @@ from functools import lru_cache
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.agents.browser_agent import BrowserAgent
@@ -38,9 +39,26 @@ app = FastAPI(title=settings.app_name, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    return _error_response(request, exc.status_code, "http_error", str(exc.detail))
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    return _error_response(request, 422, "validation_error", str(exc.errors()))
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("unhandled request error request_id=%s path=%s", _request_id(request), request.url.path)
+    return _error_response(request, 500, "internal_error", str(exc))
+
+
 @app.middleware("http")
 async def request_context(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID") or str(uuid4())
+    request.state.request_id = request_id
     start = time.perf_counter()
     try:
         response = await call_next(request)
@@ -52,6 +70,16 @@ async def request_context(request: Request, call_next):
     response.headers["X-Request-ID"] = request_id
     logger.info("request completed request_id=%s method=%s path=%s status=%s duration_ms=%.2f", request_id, request.method, request.url.path, response.status_code, duration_ms)
     return response
+
+
+def _request_id(request: Request) -> str:
+    return getattr(request.state, "request_id", "")
+
+
+def _error_response(request: Request, status_code: int, error: str, detail: str) -> JSONResponse:
+    request_id = _request_id(request)
+    headers = {"X-Request-ID": request_id} if request_id else None
+    return JSONResponse(status_code=status_code, headers=headers, content={"error": error, "detail": detail, "request_id": request_id})
 
 
 @lru_cache

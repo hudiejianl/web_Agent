@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     max_browser_candidates: int = 10
     max_browser_ingest: int = 3
     max_browser_navigation_pages: int = 8
+    browser_fetch_retries: int = 2
     embedding_model: str = "hashing"
     llm_provider: str = "none"
     llm_model: str = ""

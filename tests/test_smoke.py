@@ -1,5 +1,8 @@
 import os
 
+import pytest
+import requests
+
 os.environ["LLM_PROVIDER"] = "none"
 
 from fastapi.testclient import TestClient
@@ -64,6 +67,40 @@ def test_rag_evaluation_endpoint():
     assert "# RAG Evaluation Report" in report_payload["markdown"]
     assert "| Strategy | Cases | Recall | Precision | Relevance |" in report_payload["markdown"]
     assert [item["strategy"] for item in report_payload["comparison"]["strategies"]] == ["baseline", "hybrid", "reranker"]
+
+
+def test_api_errors_have_consistent_shape():
+    client = TestClient(app)
+    response = client.get("/api/traces/missing", headers={"X-Request-ID": "missing-trace-request"})
+
+    assert response.status_code == 404
+    assert response.headers["X-Request-ID"] == "missing-trace-request"
+    assert response.json() == {"error": "http_error", "detail": "Trace not found", "request_id": "missing-trace-request"}
+
+
+def test_browser_agent_retries_and_classifies_timeout(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent, BrowserFetchError
+
+    class FakeSettings:
+        request_timeout_seconds = 1
+        browser_fetch_retries = 2
+
+    calls = []
+    monkeypatch.setattr("app.agents.browser_agent.get_settings", lambda: FakeSettings())
+    monkeypatch.setattr("app.agents.browser_agent.time.sleep", lambda seconds: None)
+
+    def fake_get(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise requests.Timeout("slow upstream")
+
+    monkeypatch.setattr("app.agents.browser_agent.requests.get", fake_get)
+
+    with pytest.raises(BrowserFetchError) as exc_info:
+        BrowserAgent().fetch("https://example.edu.cn/profile")
+
+    assert len(calls) == 2
+    assert exc_info.value.reason == "timeout"
+    assert exc_info.value.attempts == 2
 
 
 def test_browser_agent_sets_windows_proactor_policy(monkeypatch):
@@ -146,6 +183,9 @@ def test_browser_research_endpoint(monkeypatch):
 
     def fake_fetch(self, url, use_playwright=False, actions=None):
         if "search" in url:
+            if not hasattr(fake_fetch, "failed_once"):
+                fake_fetch.failed_once = True
+                raise RuntimeError("temporary search failure")
             return {
                 "url": url,
                 "title": "Search",
@@ -172,7 +212,7 @@ def test_browser_research_endpoint(monkeypatch):
 
     monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
     monkeypatch.setattr(IngestionService, "ingest_profile", fake_ingest_profile)
-    monkeypatch.setattr(BrowserResearchService, "_build_search_urls", lambda self, request, rewritten_queries: ["https://example.com/search?q=demo"])
+    monkeypatch.setattr(BrowserResearchService, "_build_search_urls", lambda self, request, rewritten_queries: ["https://example.com/search?q=demo", "https://example.com/search?q=demo2"])
 
     client = TestClient(app)
     response = client.post(
@@ -187,6 +227,7 @@ def test_browser_research_endpoint(monkeypatch):
     assert payload["tutors"]
     assert payload["tutors"][0]["name"] == "张三"
     assert any(item["agent"] == "Query Rewriter Agent" for item in payload["trace"])
+    assert any(item["action"] == "browse_search_page" and item["status"] == "failed" and item["metadata"]["error_type"] == "RuntimeError" for item in payload["trace"])
     assert any(item["action"] == "discover_navigation_links" for item in payload["trace"])
     assert any(item["agent"] == "Browser Agent" for item in payload["trace"])
 

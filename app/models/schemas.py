@@ -232,6 +232,12 @@ class TraceRunResponse(BaseModel):
     runs: list[AgentTraceRun] = Field(default_factory=list)
 
 
+class ErrorResponse(BaseModel):
+    error: str
+    detail: str
+    request_id: str = ""
+
+
 class RAGEvaluationCase(BaseModel):
     id: str
     query: str

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from urllib.parse import quote_plus
 
-from app.agents.browser_agent import BrowserAgent
+from app.agents.browser_agent import BrowserAgent, BrowserFetchError
 from app.config import get_settings
 from app.agents.query_rewriter import DEFAULT_ALLOWED_DOMAINS, QueryRewriter
 from app.agents.research_agent import ResearchAgent
@@ -93,7 +93,7 @@ class BrowserResearchService:
                 page = self.browser.fetch(search_url, use_playwright=request.use_playwright, actions=[])
                 trace.append(self._trace("Browser Agent", "browse_search_page", "completed", f"已浏览搜索入口：{search_url}"))
             except Exception as exc:
-                trace.append(self._trace("Browser Agent", "browse_search_page", "failed", f"搜索入口失败：{search_url}", {"error": str(exc)[:180]}))
+                trace.append(self._trace("Browser Agent", "browse_search_page", "failed", f"搜索入口失败：{search_url}", self._error_metadata(exc)))
                 continue
             for candidate in result_filter.filter_links(page.get("links", []), filter_query, search_url):
                 existing = collected.get(candidate.url)
@@ -126,7 +126,7 @@ class BrowserResearchService:
                 trace.append(self._trace("Browser Agent", "navigate_candidate_page", "completed", f"导航访问候选入口：{page_candidate.url}"))
             except Exception as exc:
                 page_candidate.error = str(exc)[:300]
-                trace.append(self._trace("Browser Agent", "navigate_candidate_page", "failed", f"导航入口失败：{page_candidate.url}", {"error": page_candidate.error}))
+                trace.append(self._trace("Browser Agent", "navigate_candidate_page", "failed", f"导航入口失败：{page_candidate.url}", self._error_metadata(exc)))
                 continue
             for discovered in result_filter.filter_links(page.get("links", []), filter_query, page_candidate.url):
                 discovered.score += max(page_candidate.score * 0.2, 1.0)
@@ -152,11 +152,17 @@ class BrowserResearchService:
             except Exception as exc:
                 candidate.status = "failed"
                 candidate.error = str(exc)[:300]
-                trace.append(self._trace("Research Agent", "structure_and_ingest", "failed", f"候选链接处理失败：{candidate.url}", {"error": candidate.error}))
+                trace.append(self._trace("Research Agent", "structure_and_ingest", "failed", f"候选链接处理失败：{candidate.url}", self._error_metadata(exc)))
         for candidate in candidates:
             if candidate.status == "pending":
                 candidate.status = "skipped"
         return tutors
+
+    def _error_metadata(self, exc: Exception) -> dict[str, str | int | float | bool]:
+        metadata: dict[str, str | int | float | bool] = {"error": str(exc)[:180], "error_type": type(exc).__name__}
+        if isinstance(exc, BrowserFetchError):
+            metadata.update({"reason": exc.reason, "attempts": exc.attempts, "url": exc.url})
+        return metadata
 
     def _trace(self, agent: str, action: str, status: str, detail: str, metadata: dict[str, str | int | float | bool] | None = None) -> AgentTrace:
         return AgentTrace(agent=agent, action=action, status=status, detail=detail, timestamp=datetime.utcnow(), metadata=metadata or {})

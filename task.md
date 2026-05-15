@@ -349,7 +349,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [ ] 接入 LangSmith 或 OpenTelemetry
 - [x] 增加请求 ID / session trace ID
 - [x] 增加日志系统
-- [ ] 增加错误处理与失败恢复
+- [x] 增加错误处理与失败恢复
 - [x] 增加配置化开关
 - [ ] 增加 Dockerfile
 - [ ] 增加启动脚本
@@ -367,9 +367,9 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 增加 Browser Research 上限配置：搜索页数、候选链接数、入库数量、导航页数。
    - [x] 对请求参数做统一裁剪，避免一次请求触发过多公开网页访问。
 2. **错误处理与失败恢复**
-   - [ ] 统一 API 错误响应格式。
-   - [ ] Browser / Research / RAG 节点记录结构化失败原因。
-   - [ ] 对网页采集增加有限重试、超时分类和失败 trace。
+   - [x] 统一 API 错误响应格式。
+   - [x] Browser / Research / RAG 节点记录结构化失败原因。
+   - [x] 对网页采集增加有限重试、超时分类和失败 trace。
 3. **Planner 与任务状态持久化**
    - [ ] 将 `AgentPlan` 和 `PlanStep` 持久化到 SQLite。
    - [ ] 支持用户补充约束后的重新规划。

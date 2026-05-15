@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import time
 from urllib.parse import urljoin
 
 import requests
@@ -10,6 +11,14 @@ from bs4 import BeautifulSoup
 
 from app.config import get_settings
 from app.models.schemas import BrowserAction, BrowserBrowseResponse
+
+
+class BrowserFetchError(RuntimeError):
+    def __init__(self, url: str, reason: str, attempts: int, detail: str):
+        self.url = url
+        self.reason = reason
+        self.attempts = attempts
+        super().__init__(f"{reason} after {attempts} attempts for {url}: {detail}")
 
 
 class BrowserAgent:
@@ -39,14 +48,23 @@ class BrowserAgent:
 
     def _fetch_static(self, url: str) -> dict[str, object]:
         settings = get_settings()
-        response = requests.get(url, timeout=settings.request_timeout_seconds, headers={"User-Agent": "AdmissionResearchAgent/0.1"})
-        response.raise_for_status()
-        html = response.text
-        soup = BeautifulSoup(html, "html.parser")
-        title = soup.title.get_text(strip=True) if soup.title else url
-        text = trafilatura.extract(html, url=url) or soup.get_text("\n", strip=True)
-        links = self._extract_links(soup, url)
-        return {"url": url, "final_url": response.url, "title": title, "text": text[:20000], "links": links, "dom": self._summarize_dom(soup), "used_playwright": False}
+        attempts = max(1, settings.browser_fetch_retries)
+        last_error: Exception | None = None
+        for attempt in range(1, attempts + 1):
+            try:
+                response = requests.get(url, timeout=settings.request_timeout_seconds, headers={"User-Agent": "AdmissionResearchAgent/0.1"})
+                response.raise_for_status()
+                html = response.text
+                soup = BeautifulSoup(html, "html.parser")
+                title = soup.title.get_text(strip=True) if soup.title else url
+                text = trafilatura.extract(html, url=url) or soup.get_text("\n", strip=True)
+                links = self._extract_links(soup, url)
+                return {"url": url, "final_url": response.url, "title": title, "text": text[:20000], "links": links, "dom": self._summarize_dom(soup), "used_playwright": False, "attempts": attempt}
+            except requests.RequestException as exc:
+                last_error = exc
+                if attempt < attempts:
+                    time.sleep(min(0.2 * attempt, 1.0))
+        raise BrowserFetchError(url=url, reason=self._classify_request_error(last_error), attempts=attempts, detail=str(last_error))
 
     def _browse_with_playwright(self, url: str, actions: list[BrowserAction]) -> BrowserBrowseResponse:
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -81,6 +99,19 @@ class BrowserAgent:
             used_playwright=True,
             actions=action_results,
         )
+
+    def _classify_request_error(self, exc: Exception | None) -> str:
+        if isinstance(exc, requests.Timeout):
+            return "timeout"
+        if isinstance(exc, requests.HTTPError):
+            status_code = exc.response.status_code if exc.response is not None else 0
+            if status_code >= 500:
+                return "upstream_server_error"
+            if status_code >= 400:
+                return "upstream_client_error"
+        if isinstance(exc, requests.ConnectionError):
+            return "connection_error"
+        return "fetch_error"
 
     def _ensure_playwright_event_loop_policy(self) -> None:
         if sys.platform == "win32" and hasattr(asyncio, "WindowsProactorEventLoopPolicy"):
