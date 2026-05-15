@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-from app.models.schemas import AgentTrace, AgentTraceRun, MemoryState, TutorProfile
+from app.models.schemas import AgentPlan, AgentPlanRun, AgentTrace, AgentTraceRun, MemoryState, TutorProfile
 from app.storage.database import get_connection
 
 
@@ -44,6 +44,34 @@ class TutorRepository:
         with get_connection() as connection:
             row = connection.execute("SELECT payload FROM tutors WHERE id = ?", (tutor_id,)).fetchone()
         return TutorProfile.model_validate_json(row["payload"]) if row else None
+
+
+class PlanRepository:
+    def save(self, session_id: str, trace_id: str, plan: AgentPlan) -> AgentPlanRun:
+        run = AgentPlanRun(plan_id=str(uuid4()), session_id=session_id, trace_id=trace_id, plan=plan)
+        with get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO agent_plans (plan_id, session_id, trace_id, payload, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (run.plan_id, run.session_id, run.trace_id, run.model_dump_json(), run.created_at.isoformat()),
+            )
+            connection.commit()
+        return run
+
+    def get(self, plan_id: str) -> AgentPlanRun | None:
+        with get_connection() as connection:
+            row = connection.execute("SELECT payload FROM agent_plans WHERE plan_id = ?", (plan_id,)).fetchone()
+        return AgentPlanRun.model_validate_json(row["payload"]) if row else None
+
+    def list_by_session(self, session_id: str, limit: int = 20) -> list[AgentPlanRun]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM agent_plans WHERE session_id = ? ORDER BY created_at DESC LIMIT ?",
+                (session_id, limit),
+            ).fetchall()
+        return [AgentPlanRun.model_validate_json(row["payload"]) for row in rows]
 
 
 class TraceRepository:

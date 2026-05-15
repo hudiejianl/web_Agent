@@ -14,14 +14,14 @@ from fastapi.staticfiles import StaticFiles
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
 from app.logging_config import configure_logging
-from app.models.schemas import BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, SearchResponse, AgentTraceRun, TraceRunResponse
+from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, SearchResponse, TraceRunResponse
 from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
 from app.services.browser_research import BrowserResearchService
 from app.services.chat import ChatService
 from app.services.ingestion import IngestionService, ensure_seed_data
 from app.storage.database import init_database
-from app.storage.repositories import MemoryRepository, TraceRepository
+from app.storage.repositories import MemoryRepository, PlanRepository, TraceRepository
 
 configure_logging()
 settings = get_settings()
@@ -157,6 +157,19 @@ def get_trace(trace_id: str) -> AgentTraceRun:
 @app.get("/api/traces/session/{session_id}", response_model=TraceRunResponse)
 def list_session_traces(session_id: str, limit: int = 20) -> TraceRunResponse:
     return TraceRunResponse(runs=TraceRepository().list_by_session(session_id, limit=limit))
+
+
+@app.get("/api/plans/{plan_id}", response_model=AgentPlanRun)
+def get_plan(plan_id: str) -> AgentPlanRun:
+    plan = PlanRepository().get(plan_id)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return plan
+
+
+@app.get("/api/plans/session/{session_id}", response_model=PlanRunResponse)
+def list_session_plans(session_id: str, limit: int = 20) -> PlanRunResponse:
+    return PlanRunResponse(runs=PlanRepository().list_by_session(session_id, limit=limit))
 
 
 @app.get("/api/memory/{session_id}")

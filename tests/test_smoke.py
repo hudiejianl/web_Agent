@@ -45,6 +45,17 @@ def test_chat_returns_tutor_recommendations():
     assert session_traces_response.status_code == 200
     assert any(item["trace_id"] == payload["trace_id"] for item in session_traces_response.json()["runs"])
 
+    session_plans_response = client.get("/api/plans/session/test-session")
+    assert session_plans_response.status_code == 200
+    plan_runs = session_plans_response.json()["runs"]
+    assert plan_runs
+    assert plan_runs[0]["trace_id"] == payload["trace_id"]
+    assert plan_runs[0]["plan"]["steps"]
+
+    plan_response = client.get(f"/api/plans/{plan_runs[0]['plan_id']}")
+    assert plan_response.status_code == 200
+    assert plan_response.json()["plan_id"] == plan_runs[0]["plan_id"]
+
 
 def test_rag_evaluation_endpoint():
     client = TestClient(app)

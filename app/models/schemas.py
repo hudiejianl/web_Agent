@@ -121,6 +121,14 @@ class AgentPlan(BaseModel):
     urls: list[str] = Field(default_factory=list)
 
 
+class AgentPlanRun(BaseModel):
+    plan_id: str
+    session_id: str = "default"
+    trace_id: str = ""
+    plan: AgentPlan
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 # AgentTrace 记录一次请求中每个智能体节点的执行轨迹，后续会持久化用于调试和展示。
 class AgentTrace(BaseModel):
     agent: str
@@ -230,6 +238,10 @@ class SearchResponse(BaseModel):
 
 class TraceRunResponse(BaseModel):
     runs: list[AgentTraceRun] = Field(default_factory=list)
+
+
+class PlanRunResponse(BaseModel):
+    runs: list[AgentPlanRun] = Field(default_factory=list)
 
 
 class ErrorResponse(BaseModel):

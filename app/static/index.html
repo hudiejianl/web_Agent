@@ -74,7 +74,7 @@
       });
       const data = await res.json();
       answer.textContent = data.answer + '\n\nTrace ID：' + (data.trace_id || '未保存') + '\n\n长期记忆：' + JSON.stringify(data.memory.profile, null, 2);
-      renderPlan(data.plan);
+      await renderPlan(data.plan);
       renderEvidence(data.retrieval_evidence || []);
       renderTrace(data.trace || []);
       renderTutors(data.tutors || []);
@@ -141,9 +141,11 @@
       renderTutors(data.tutors || []);
     }
 
-    function renderPlan(plan) {
+    async function renderPlan(plan) {
       const steps = (plan && plan.steps) || [];
-      document.getElementById('plan').innerHTML = steps.map(step => `
+      const latest = await fetch(`/api/plans/session/${sessionId}?limit=1`).then(res => res.ok ? res.json() : {runs: []}).catch(() => ({runs: []}));
+      const latestPlan = (latest.runs || [])[0];
+      document.getElementById('plan').innerHTML = `${latestPlan ? `<p class="muted">Plan ID：${latestPlan.plan_id} · Trace ID：${latestPlan.trace_id}</p>` : ''}` + (steps.map(step => `
         <div class="step">
           <span class="badge">${step.status}</span>
           <div>
@@ -156,7 +158,7 @@
             ${step.error ? `<br /><span style="color:#b91c1c">错误：${step.error}</span>` : ''}
           </div>
         </div>
-      `).join('') || '<p class="muted">暂无任务计划</p>';
+      `).join('') || '<p class="muted">暂无任务计划</p>');
     }
 
     function renderEvidence(items) {

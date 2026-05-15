@@ -39,6 +39,17 @@ CREATE TABLE IF NOT EXISTS agent_traces (
 
 CREATE INDEX IF NOT EXISTS idx_agent_traces_session_created
 ON agent_traces (session_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS agent_plans (
+    plan_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    trace_id TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_plans_session_created
+ON agent_plans (session_id, created_at DESC);
 """
 
 
