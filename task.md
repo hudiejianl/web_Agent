@@ -350,9 +350,51 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 增加请求 ID / session trace ID
 - [x] 增加日志系统
 - [ ] 增加错误处理与失败恢复
-- [ ] 增加配置化开关
+- [x] 增加配置化开关
 - [ ] 增加 Dockerfile
 - [ ] 增加启动脚本
+
+---
+
+## 后续增强路线图
+
+按优先级从工程稳定性、Agent 深度、检索质量和展示完整度逐步推进：
+
+1. **配置化开关与安全边界**
+   - [x] 增加 `ENABLE_BROWSER_RESEARCH`，允许关闭自动联网研究接口。
+   - [x] 增加 `ENABLE_RAG_EVAL`，允许关闭评估接口，避免线上误触高开销任务。
+   - [x] 增加 `AUTO_SEED_DATA`，控制启动时是否自动导入示例导师数据。
+   - [x] 增加 Browser Research 上限配置：搜索页数、候选链接数、入库数量、导航页数。
+   - [x] 对请求参数做统一裁剪，避免一次请求触发过多公开网页访问。
+2. **错误处理与失败恢复**
+   - [ ] 统一 API 错误响应格式。
+   - [ ] Browser / Research / RAG 节点记录结构化失败原因。
+   - [ ] 对网页采集增加有限重试、超时分类和失败 trace。
+3. **Planner 与任务状态持久化**
+   - [ ] 将 `AgentPlan` 和 `PlanStep` 持久化到 SQLite。
+   - [ ] 支持用户补充约束后的重新规划。
+   - [ ] 支持按 `trace_id` / `session_id` 回看计划执行状态。
+4. **高级长期记忆**
+   - [ ] 实现 Episodic Memory：记录联系过、收藏、排除、反馈过的导师。
+   - [ ] 实现 Semantic Memory：抽象长期研究兴趣和申请策略。
+   - [ ] 实现 Memory Retrieval：回答时检索相关历史记忆。
+5. **研究级 RAG 继续增强**
+   - [ ] 接入 BGE-M3 / bge-large-zh embedding。
+   - [ ] 接入 OpenAI-compatible embedding API。
+   - [ ] 接入 bge-reranker / jina-reranker。
+   - [ ] 实现 chunking 策略并评估不同 chunk size。
+6. **评估系统完善**
+   - [ ] 增加 Faithfulness 评估。
+   - [ ] 保存历史评估结果。
+   - [ ] 对比不同 embedding、reranker 和 chunking 配置。
+7. **Browser Agent 深度增强**
+   - [ ] 支持导师列表页分页识别。
+   - [ ] 支持更深链路导航：高校主页 → 学院主页 → 师资列表 → 导师主页 → 论文页。
+   - [ ] 增加页面质量评分和候选主页置信度。
+8. **部署与展示**
+   - [ ] 增加 Dockerfile 和启动脚本。
+   - [ ] 增加 React / Next.js 前端工作流 UI。
+   - [ ] 可选接入 LangSmith 或 OpenTelemetry。
 
 ---
 

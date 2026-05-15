@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     chroma_path: str = "data/runtime/chroma"
     chroma_collection: str = "tutors"
     log_level: str = "INFO"
+    enable_browser_research: bool = True
+    enable_rag_eval: bool = True
+    auto_seed_data: bool = True
+    max_browser_search_pages: int = 2
+    max_browser_candidates: int = 10
+    max_browser_ingest: int = 3
+    max_browser_navigation_pages: int = 8
     embedding_model: str = "hashing"
     llm_provider: str = "none"
     llm_model: str = ""

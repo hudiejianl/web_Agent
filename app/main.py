@@ -87,6 +87,8 @@ def browse(request: BrowserBrowseRequest) -> BrowserBrowseResponse:
 
 @app.post("/api/browser/research", response_model=BrowserResearchResponse)
 def browser_research(request: BrowserResearchRequest) -> BrowserResearchResponse:
+    if not settings.enable_browser_research:
+        raise HTTPException(status_code=403, detail="Browser research is disabled by configuration")
     return BrowserResearchService().research(request)
 
 
@@ -97,16 +99,22 @@ def search_tutors(q: str, limit: int = 5) -> SearchResponse:
 
 @app.get("/api/eval/rag", response_model=RAGEvaluationResponse)
 def evaluate_rag(limit: int = 5, strategy: str = "reranker") -> RAGEvaluationResponse:
+    if not settings.enable_rag_eval:
+        raise HTTPException(status_code=403, detail="RAG evaluation is disabled by configuration")
     return RAGEvaluator().evaluate(limit=limit, strategy=strategy)
 
 
 @app.get("/api/eval/rag/compare", response_model=RAGEvaluationComparisonResponse)
 def compare_rag(limit: int = 5) -> RAGEvaluationComparisonResponse:
+    if not settings.enable_rag_eval:
+        raise HTTPException(status_code=403, detail="RAG evaluation is disabled by configuration")
     return RAGEvaluator().compare(limit=limit)
 
 
 @app.get("/api/eval/rag/report", response_model=RAGEvaluationReportResponse)
 def report_rag(limit: int = 5) -> RAGEvaluationReportResponse:
+    if not settings.enable_rag_eval:
+        raise HTTPException(status_code=403, detail="RAG evaluation is disabled by configuration")
     return RAGEvaluator().report(limit=limit)
 
 

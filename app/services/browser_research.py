@@ -4,6 +4,7 @@ from datetime import datetime
 from urllib.parse import quote_plus
 
 from app.agents.browser_agent import BrowserAgent
+from app.config import get_settings
 from app.agents.query_rewriter import DEFAULT_ALLOWED_DOMAINS, QueryRewriter
 from app.agents.research_agent import ResearchAgent
 from app.models.schemas import AgentTrace, BrowserResearchRequest, BrowserResearchResponse, CandidateLink, TutorProfile
@@ -28,6 +29,7 @@ class BrowserResearchService:
         self.traces = TraceRepository()
 
     def research(self, request: BrowserResearchRequest) -> BrowserResearchResponse:
+        request = self._clamp_request(request)
         trace: list[AgentTrace] = []
         allowed_domains = request.allowed_domains or DEFAULT_ALLOWED_DOMAINS
         rewritten_queries = self.query_rewriter.rewrite(request.query, allowed_domains=allowed_domains, max_queries=request.max_queries)
@@ -48,6 +50,17 @@ class BrowserResearchService:
             candidates=candidates,
             tutors=tutors,
             trace=trace,
+        )
+
+    def _clamp_request(self, request: BrowserResearchRequest) -> BrowserResearchRequest:
+        settings = get_settings()
+        return request.model_copy(
+            update={
+                "max_search_pages": max(1, min(request.max_search_pages, settings.max_browser_search_pages)),
+                "max_candidates": max(1, min(request.max_candidates, settings.max_browser_candidates)),
+                "max_ingest": max(1, min(request.max_ingest, settings.max_browser_ingest)),
+                "max_navigation_pages": max(1, min(request.max_navigation_pages, settings.max_browser_navigation_pages)),
+            }
         )
 
     def _build_search_urls(self, request: BrowserResearchRequest, rewritten_queries: list[str]) -> list[str]:

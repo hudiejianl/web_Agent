@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.config import get_settings
 from app.crawlers.faculty import FacultyCrawler
 from app.models.schemas import TutorProfile
 from app.rag.vector_store import VectorStore
@@ -34,6 +35,8 @@ class IngestionService:
 
 
 def ensure_seed_data() -> None:
+    if not get_settings().auto_seed_data:
+        return
     repository = TutorRepository()
     if repository.list(limit=1):
         return

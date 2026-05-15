@@ -118,6 +118,27 @@ def test_browser_browse_endpoint(monkeypatch):
     assert payload["dom"]["headings"][0]["text"] == "Demo"
 
 
+def test_browser_research_clamps_configured_limits(monkeypatch):
+    from app.models.schemas import BrowserResearchRequest
+    from app.services.browser_research import BrowserResearchService
+
+    class FakeSettings:
+        max_browser_search_pages = 1
+        max_browser_candidates = 2
+        max_browser_ingest = 1
+        max_browser_navigation_pages = 3
+
+    monkeypatch.setattr("app.services.browser_research.get_settings", lambda: FakeSettings())
+
+    request = BrowserResearchRequest(query="人工智能 导师", max_search_pages=5, max_candidates=9, max_ingest=4, max_navigation_pages=10)
+    clamped = BrowserResearchService()._clamp_request(request)
+
+    assert clamped.max_search_pages == 1
+    assert clamped.max_candidates == 2
+    assert clamped.max_ingest == 1
+    assert clamped.max_navigation_pages == 3
+
+
 def test_browser_research_endpoint(monkeypatch):
     from app.agents.browser_agent import BrowserAgent
     from app.services.browser_research import BrowserResearchService
