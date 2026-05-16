@@ -119,6 +119,8 @@ class AgentPlan(BaseModel):
     need_retrieval: bool = True
     need_ingestion: bool = False
     urls: list[str] = Field(default_factory=list)
+    is_replan: bool = False
+    replan_from: str | None = None
 
 
 class AgentPlanRun(BaseModel):

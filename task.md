@@ -372,7 +372,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 对网页采集增加有限重试、超时分类和失败 trace。
 3. **Planner 与任务状态持久化**
    - [x] 将 `AgentPlan` 和 `PlanStep` 持久化到 SQLite。
-   - [ ] 支持用户补充约束后的重新规划。
+   - [x] 支持用户补充约束后的重新规划。
    - [x] 支持按 `trace_id` / `session_id` 回看计划执行状态。
 4. **高级长期记忆**
    - [ ] 实现 Episodic Memory：记录联系过、收藏、排除、反馈过的导师。

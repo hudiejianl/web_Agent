@@ -11,6 +11,7 @@ from app.models.schemas import AgentPlan, AgentTrace, MemoryState, RetrievalEvid
 from app.rag.evidence import RetrievalEvidenceBuilder
 from app.rag.retriever import TutorRetriever
 from app.services.ingestion import IngestionService
+from app.storage.repositories import PlanRepository
 
 
 class AdmissionState(TypedDict, total=False):
@@ -32,6 +33,7 @@ class AdmissionGraph:
         self.retriever = TutorRetriever()
         self.evidence_builder = RetrievalEvidenceBuilder()
         self.ingestion = IngestionService()
+        self.plans = PlanRepository()
         self.advisor = AdvisorAgent()
         self.graph = self._build()
 
@@ -69,14 +71,21 @@ class AdmissionGraph:
         return state
 
     def _plan(self, state: AdmissionState) -> AdmissionState:
-        state["plan"] = self.planner_agent.plan(state["message"])
+        previous_runs = self.plans.list_by_session(state["session_id"], limit=1)
+        previous_run = previous_runs[0] if previous_runs else None
+        previous_constraints = previous_run.plan.constraints if previous_run else []
+        state["plan"] = self.planner_agent.plan(
+            state["message"],
+            previous_plan_id=previous_run.plan_id if previous_run else None,
+            previous_constraints=previous_constraints,
+        )
         self._trace(
             state,
             "Planner Agent",
-            "decompose_task",
+            "replan_task" if state["plan"].is_replan else "decompose_task",
             "completed",
             f"生成 {len(state['plan'].steps)} 个执行步骤，约束：{', '.join(state['plan'].constraints) or '无显式约束'}",
-            {"step_count": len(state["plan"].steps)},
+            {"step_count": len(state["plan"].steps), "is_replan": state["plan"].is_replan, "replan_from": state["plan"].replan_from or ""},
         )
         return state
 

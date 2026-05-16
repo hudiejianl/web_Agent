@@ -57,6 +57,28 @@ def test_chat_returns_tutor_recommendations():
     assert plan_response.json()["plan_id"] == plan_runs[0]["plan_id"]
 
 
+def test_chat_replans_with_previous_constraints():
+    client = TestClient(app)
+    session_id = "replan-session"
+    first = client.post("/api/chat", json={"session_id": session_id, "message": "我想申请 RAG 方向硕士，偏好上海"})
+    assert first.status_code == 200
+    first_plan = first.json()["plan"]
+    assert first_plan["is_replan"] is False
+
+    second = client.post("/api/chat", json={"session_id": session_id, "message": "另外优先考虑武汉和多模态方向"})
+    assert second.status_code == 200
+    second_payload = second.json()
+    second_plan = second_payload["plan"]
+
+    assert second_plan["is_replan"] is True
+    assert second_plan["replan_from"]
+    assert "RAG" in second_plan["constraints"]
+    assert "上海" in second_plan["constraints"]
+    assert "武汉" in second_plan["constraints"]
+    assert "多模态" in second_plan["constraints"]
+    assert any(item["action"] == "replan_task" for item in second_payload["trace"])
+
+
 def test_rag_evaluation_endpoint():
     client = TestClient(app)
     response = client.get("/api/eval/rag")

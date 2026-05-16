@@ -9,7 +9,8 @@ URL_PATTERN = re.compile(r"https?://[^\s，。)）]+")
 
 
 class PlannerAgent:
-    def plan(self, message: str) -> AgentPlan:
+    def plan(self, message: str, previous_plan_id: str | None = None, previous_constraints: list[str] | None = None) -> AgentPlan:
+        previous_constraints = previous_constraints or []
         urls = URL_PATTERN.findall(message)
         lowered = message.lower()
         task_type = TaskType.chat
@@ -18,16 +19,17 @@ class PlannerAgent:
         if "比较" in message or "对比" in message:
             task_type = TaskType.compare_tutors
 
-        constraints = self._extract_constraints(message)
+        constraints = list(dict.fromkeys([*previous_constraints, *self._extract_constraints(message)]))
+        is_replan = bool(previous_plan_id and self._is_constraint_update(message))
         steps = [
             PlanStep(
                 id="understand_goal",
-                name="理解申请目标与约束",
+                name="重新理解申请目标与补充约束" if is_replan else "理解申请目标与约束",
                 agent="Planner Agent",
                 status="completed",
-                rationale="识别研究方向、地区、学位阶段、论文和合作等筛选条件",
-                inputs={"message": message},
-                outputs={"constraints": constraints, "urls": urls},
+                rationale="合并历史计划约束和用户新增约束" if is_replan else "识别研究方向、地区、学位阶段、论文和合作等筛选条件",
+                inputs={"message": message, "previous_plan_id": previous_plan_id or ""},
+                outputs={"constraints": constraints, "urls": urls, "is_replan": is_replan},
                 expected_output="结构化申请目标",
             )
         ]
@@ -96,6 +98,8 @@ class PlannerAgent:
             need_retrieval=True,
             need_ingestion=bool(urls),
             urls=urls,
+            is_replan=is_replan,
+            replan_from=previous_plan_id if is_replan else None,
         )
 
     def _extract_constraints(self, message: str) -> list[str]:
@@ -107,3 +111,6 @@ class PlannerAgent:
 
     def _needs_external_research(self, message: str) -> bool:
         return any(keyword in message for keyword in ["近三年", "顶会", "企业合作", "武汉", "高校", "主页", "论文"])
+
+    def _is_constraint_update(self, message: str) -> bool:
+        return any(keyword in message for keyword in ["再", "另外", "补充", "改成", "换成", "优先", "不要", "同时", "还要", "限定"])
