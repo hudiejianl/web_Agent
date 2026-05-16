@@ -57,6 +57,22 @@ def test_chat_returns_tutor_recommendations():
     assert plan_response.json()["plan_id"] == plan_runs[0]["plan_id"]
 
 
+def test_memory_records_episodic_events():
+    client = TestClient(app)
+    session_id = "episodic-session"
+    response = client.post("/api/chat", json={"session_id": session_id, "message": "我已经联系了张三老师，也想收藏李四教授，但不要王五导师"})
+    assert response.status_code == 200
+    events = response.json()["memory"]["episodic_events"]
+
+    assert any(event["type"] == "contacted" and event["tutor_name"] == "张三" for event in events)
+    assert any(event["type"] == "favorited" and event["tutor_name"] == "李四" for event in events)
+    assert any(event["type"] == "rejected" and event["tutor_name"] == "王五" for event in events)
+
+    memory_response = client.get(f"/api/memory/{session_id}")
+    assert memory_response.status_code == 200
+    assert memory_response.json()["episodic_events"]
+
+
 def test_chat_replans_with_previous_constraints():
     client = TestClient(app)
     session_id = "replan-session"

@@ -89,12 +89,20 @@ class UserProfile(BaseModel):
     constraints: list[str] = Field(default_factory=list)
 
 
-# 长期记忆保存用户画像、近期对话和压缩摘要，用于多轮咨询上下文延续。
+class MemoryEvent(BaseModel):
+    type: Literal["contacted", "favorited", "rejected", "feedback"]
+    tutor_name: str = ""
+    note: str = ""
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# 长期记忆保存用户画像、事件记忆、近期对话和压缩摘要，用于多轮咨询上下文延续。
 class MemoryState(BaseModel):
     session_id: str
     profile: UserProfile = Field(default_factory=UserProfile)
     summary: str = ""
     recent_messages: list[dict[str, str]] = Field(default_factory=list)
+    episodic_events: list[MemoryEvent] = Field(default_factory=list)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
