@@ -333,7 +333,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 目标：从简单用户画像升级为长期可演化记忆系统。
 
 - [x] Episodic Memory：记录用户联系过的导师、反馈、拒绝、偏好变化
-- [ ] Semantic Memory：抽象用户长期研究兴趣和申请策略
+- [x] Semantic Memory：抽象用户长期研究兴趣和申请策略
 - [ ] Procedural Memory：记录用户偏好的申请流程与材料准备方式
 - [ ] Memory Retrieval：回答时检索相关历史记忆
 - [ ] Memory Reflection：定期总结用户长期目标变化
@@ -376,7 +376,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 支持按 `trace_id` / `session_id` 回看计划执行状态。
 4. **高级长期记忆**
    - [x] 实现 Episodic Memory：记录联系过、收藏、排除、反馈过的导师。
-   - [ ] 实现 Semantic Memory：抽象长期研究兴趣和申请策略。
+   - [x] 实现 Semantic Memory：抽象长期研究兴趣和申请策略。
    - [ ] 实现 Memory Retrieval：回答时检索相关历史记忆。
 5. **研究级 RAG 继续增强**
    - [ ] 接入 BGE-M3 / bge-large-zh embedding。

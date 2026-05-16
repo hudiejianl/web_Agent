@@ -96,13 +96,21 @@ class MemoryEvent(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
-# 长期记忆保存用户画像、事件记忆、近期对话和压缩摘要，用于多轮咨询上下文延续。
+class SemanticMemory(BaseModel):
+    research_focus: list[str] = Field(default_factory=list)
+    application_strategy: list[str] = Field(default_factory=list)
+    advisor_preferences: list[str] = Field(default_factory=list)
+    risk_flags: list[str] = Field(default_factory=list)
+
+
+# 长期记忆保存用户画像、事件记忆、语义记忆、近期对话和压缩摘要，用于多轮咨询上下文延续。
 class MemoryState(BaseModel):
     session_id: str
     profile: UserProfile = Field(default_factory=UserProfile)
     summary: str = ""
     recent_messages: list[dict[str, str]] = Field(default_factory=list)
     episodic_events: list[MemoryEvent] = Field(default_factory=list)
+    semantic: SemanticMemory = Field(default_factory=SemanticMemory)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 

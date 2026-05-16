@@ -7,9 +7,25 @@ from app.models.schemas import MemoryEvent, MemoryState
 from app.storage.repositories import MemoryRepository
 
 
-INTEREST_KEYWORDS = ["人工智能", "机器学习", "深度学习", "大模型", "RAG", "智能体", "自然语言处理", "NLP", "软件工程", "软件安全", "医学影像", "代码智能"]
+INTEREST_KEYWORDS = ["人工智能", "机器学习", "深度学习", "大模型", "RAG", "智能体", "多模态", "自然语言处理", "NLP", "软件工程", "软件安全", "医学影像", "代码智能"]
 LOCATION_KEYWORDS = ["北京", "上海", "杭州", "南京", "广州", "深圳", "江浙沪", "浙江", "江苏"]
 DEGREE_KEYWORDS = ["硕士", "博士", "直博", "研究生", "保研", "考研"]
+STRATEGY_KEYWORDS = {
+    "顶会论文导向": ["顶会", "论文", "近三年"],
+    "企业合作导向": ["企业合作", "产业", "项目合作"],
+    "地域优先": ["武汉", "北京", "上海", "江浙沪", "杭州", "南京"],
+    "硕博申请准备": ["硕士", "博士", "保研", "考研", "直博"],
+}
+ADVISOR_PREFERENCE_KEYWORDS = {
+    "偏好有招生信息的导师": ["招生", "名额", "招生要求"],
+    "偏好主页信息完整的导师": ["主页", "个人主页", "简历"],
+    "偏好方向高度匹配的导师": ["匹配", "研究方向", "方向"],
+    "偏好已联系或可沟通导师": ["联系", "沟通", "套磁", "发邮件"],
+}
+RISK_KEYWORDS = {
+    "排除用户明确不考虑的导师": ["不要", "不考虑", "排除", "不喜欢", "不合适"],
+    "需核实导师最新招生状态": ["不确定", "是否招生", "还招生", "招生状态"],
+}
 EVENT_PATTERNS = {
     "contacted": ["联系", "发邮件", "套磁", "沟通"],
     "favorited": ["收藏", "关注", "感兴趣", "优先考虑"],
@@ -45,10 +61,23 @@ class MemoryAgent:
             if keyword in user_message:
                 memory.profile.target_degree = keyword
         memory.episodic_events = self._merge_events(memory.episodic_events, self._extract_events(user_message))
+        self._update_semantic_memory(memory, user_message)
         memory.recent_messages = self.repository.recent_messages(session_id, self.settings.max_context_messages)
         if len(memory.recent_messages) >= self.settings.summary_trigger_messages:
             memory.summary = self._compress(memory)
         return self.repository.save(memory)
+
+    def _update_semantic_memory(self, memory: MemoryState, message: str) -> None:
+        memory.semantic.research_focus = self._merge_text_items(memory.semantic.research_focus, memory.profile.research_interests)
+        memory.semantic.application_strategy = self._merge_text_items(memory.semantic.application_strategy, self._match_labels(message, STRATEGY_KEYWORDS))
+        memory.semantic.advisor_preferences = self._merge_text_items(memory.semantic.advisor_preferences, self._match_labels(message, ADVISOR_PREFERENCE_KEYWORDS))
+        memory.semantic.risk_flags = self._merge_text_items(memory.semantic.risk_flags, self._match_labels(message, RISK_KEYWORDS))
+
+    def _match_labels(self, message: str, patterns: dict[str, list[str]]) -> list[str]:
+        return [label for label, keywords in patterns.items() if any(keyword in message for keyword in keywords)]
+
+    def _merge_text_items(self, existing: list[str], new_items: list[str]) -> list[str]:
+        return list(dict.fromkeys([*existing, *new_items]))[-20:]
 
     def _extract_events(self, message: str) -> list[MemoryEvent]:
         events: list[MemoryEvent] = []
@@ -86,5 +115,8 @@ class MemoryAgent:
         locations = "、".join(memory.profile.preferred_locations) or "未明确"
         degree = memory.profile.target_degree or "未明确"
         events = "；".join(f"{event.type}:{event.tutor_name or '未指明'}" for event in memory.episodic_events[-5:]) or "暂无"
+        strategy = "、".join(memory.semantic.application_strategy) or "未明确"
+        preferences = "、".join(memory.semantic.advisor_preferences) or "未明确"
+        risks = "、".join(memory.semantic.risk_flags) or "暂无"
         recent = "；".join(f"{item['role']}：{item['content'][:60]}" for item in memory.recent_messages[-4:])
-        return f"用户关注方向：{interests}；地区偏好：{locations}；目标阶段：{degree}。近期事件：{events}。近期对话：{recent}"
+        return f"用户关注方向：{interests}；地区偏好：{locations}；目标阶段：{degree}。申请策略：{strategy}；导师偏好：{preferences}；风险提示：{risks}。近期事件：{events}。近期对话：{recent}"

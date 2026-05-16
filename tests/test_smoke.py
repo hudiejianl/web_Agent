@@ -57,6 +57,24 @@ def test_chat_returns_tutor_recommendations():
     assert plan_response.json()["plan_id"] == plan_runs[0]["plan_id"]
 
 
+def test_memory_builds_semantic_profile():
+    client = TestClient(app)
+    session_id = "semantic-session"
+    response = client.post(
+        "/api/chat",
+        json={"session_id": session_id, "message": "我想找武汉多模态方向、近三年有顶会论文和企业合作、主页信息完整并且仍在招生的硕士导师"},
+    )
+    assert response.status_code == 200
+    semantic = response.json()["memory"]["semantic"]
+
+    assert "多模态" in semantic["research_focus"]
+    assert "顶会论文导向" in semantic["application_strategy"]
+    assert "企业合作导向" in semantic["application_strategy"]
+    assert "地域优先" in semantic["application_strategy"]
+    assert "偏好有招生信息的导师" in semantic["advisor_preferences"]
+    assert "偏好主页信息完整的导师" in semantic["advisor_preferences"]
+
+
 def test_memory_records_episodic_events():
     client = TestClient(app)
     session_id = "episodic-session"
