@@ -122,6 +122,14 @@ class MemoryReflection(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class MemoryConflict(BaseModel):
+    field: str
+    previous: str
+    current: str
+    resolution: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 # 长期记忆保存用户画像、事件记忆、语义记忆、流程记忆、近期对话和压缩摘要，用于多轮咨询上下文延续。
 class MemoryState(BaseModel):
     session_id: str
@@ -132,6 +140,7 @@ class MemoryState(BaseModel):
     semantic: SemanticMemory = Field(default_factory=SemanticMemory)
     procedural: ProceduralMemory = Field(default_factory=ProceduralMemory)
     reflections: list[MemoryReflection] = Field(default_factory=list)
+    conflicts: list[MemoryConflict] = Field(default_factory=list)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 

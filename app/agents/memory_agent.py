@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from app.config import get_settings
-from app.models.schemas import MemoryEvent, MemoryReflection, MemoryState, RelevantMemory
+from app.models.schemas import MemoryConflict, MemoryEvent, MemoryReflection, MemoryState, RelevantMemory
 from app.storage.repositories import MemoryRepository
 
 
@@ -85,6 +85,9 @@ class MemoryAgent:
             candidates.append(RelevantMemory(type="episodic_event", content=content, score=self._memory_score(content, query_terms) + 0.4))
         for reflection in memory.reflections:
             candidates.append(RelevantMemory(type=f"reflection:{reflection.topic}", content=reflection.content, score=self._memory_score(reflection.content, query_terms) + 0.35))
+        for conflict in memory.conflicts:
+            content = f"{conflict.field}:{conflict.previous}->{conflict.current}:{conflict.resolution}"
+            candidates.append(RelevantMemory(type="memory_conflict", content=content, score=self._memory_score(content, query_terms) + 0.45))
         ranked = sorted(candidates, key=lambda item: item.score, reverse=True)
         return [item for item in ranked if item.score > 0][:limit]
 
@@ -92,6 +95,7 @@ class MemoryAgent:
         memory = self.load(session_id)
         self.repository.append_message(session_id, "user", user_message)
         self.repository.append_message(session_id, "assistant", assistant_message)
+        self._resolve_conflicts(memory, user_message)
         for keyword in INTEREST_KEYWORDS:
             if keyword.lower() in user_message.lower() and keyword not in memory.profile.research_interests:
                 memory.profile.research_interests.append(keyword)
@@ -120,6 +124,37 @@ class MemoryAgent:
             return 0.1
         matched = sum(1 for term in query_terms if term and term.lower() in content.lower())
         return matched / len(query_terms)
+
+    def _resolve_conflicts(self, memory: MemoryState, message: str) -> None:
+        if not self._is_conflict_update(message):
+            return
+        new_locations = [keyword for keyword in LOCATION_KEYWORDS if keyword in message]
+        if new_locations and memory.profile.preferred_locations:
+            previous = "、".join(memory.profile.preferred_locations)
+            memory.profile.preferred_locations = new_locations
+            self._append_conflict(memory, "preferred_locations", previous, "、".join(new_locations), "用户显式更新地区偏好，采用最新偏好")
+        new_degrees = [keyword for keyword in DEGREE_KEYWORDS if keyword in message]
+        if new_degrees and memory.profile.target_degree and memory.profile.target_degree not in new_degrees:
+            previous = memory.profile.target_degree
+            memory.profile.target_degree = new_degrees[-1]
+            self._append_conflict(memory, "target_degree", previous, memory.profile.target_degree, "用户显式更新目标阶段，采用最新目标")
+        if any(keyword in message for keyword in ["不要", "不考虑", "排除"]):
+            rejected_names = [event.tutor_name for event in self._extract_events(message) if event.type == "rejected" and event.tutor_name]
+            if rejected_names:
+                before = len(memory.episodic_events)
+                memory.episodic_events = [event for event in memory.episodic_events if not (event.tutor_name in rejected_names and event.type in {"contacted", "favorited"})]
+                if len(memory.episodic_events) != before:
+                    self._append_conflict(memory, "episodic_events", "已联系/收藏", "排除:" + "、".join(rejected_names), "用户明确排除导师，移除旧的积极互动状态")
+
+    def _append_conflict(self, memory: MemoryState, field: str, previous: str, current: str, resolution: str) -> None:
+        key = (field, previous, current, resolution)
+        existing = {(item.field, item.previous, item.current, item.resolution) for item in memory.conflicts}
+        if key not in existing:
+            memory.conflicts.append(MemoryConflict(field=field, previous=previous, current=current, resolution=resolution))
+        memory.conflicts = memory.conflicts[-30:]
+
+    def _is_conflict_update(self, message: str) -> bool:
+        return any(keyword in message for keyword in ["改成", "换成", "不考虑", "不要", "排除", "优先考虑", "只考虑"])
 
     def _update_semantic_memory(self, memory: MemoryState, message: str) -> None:
         memory.semantic.research_focus = self._merge_text_items(memory.semantic.research_focus, memory.profile.research_interests)

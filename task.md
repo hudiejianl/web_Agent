@@ -337,7 +337,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] Procedural Memory：记录用户偏好的申请流程与材料准备方式
 - [x] Memory Retrieval：回答时检索相关历史记忆
 - [x] Memory Reflection：定期总结用户长期目标变化
-- [ ] Memory Conflict Resolution：处理用户偏好冲突
+- [x] Memory Conflict Resolution：处理用户偏好冲突
 
 ---
 

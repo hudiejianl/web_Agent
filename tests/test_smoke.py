@@ -130,6 +130,25 @@ def test_chat_uses_relevant_memory_in_answer():
     assert any(item["action"] == "retrieve_relevant_memory" and item["metadata"]["memory_count"] > 0 for item in payload["trace"])
 
 
+def test_memory_resolves_preference_conflicts():
+    client = TestClient(app)
+    session_id = "conflict-session"
+    first = client.post("/api/chat", json={"session_id": session_id, "message": "我想申请硕士，偏好上海，并且收藏张三老师"})
+    assert first.status_code == 200
+
+    second = client.post("/api/chat", json={"session_id": session_id, "message": "改成博士，只考虑北京，不要张三老师"})
+    assert second.status_code == 200
+    memory = second.json()["memory"]
+
+    assert memory["profile"]["target_degree"] == "博士"
+    assert memory["profile"]["preferred_locations"] == ["北京"]
+    assert any(item["field"] == "target_degree" and item["previous"] == "硕士" and item["current"] == "博士" for item in memory["conflicts"])
+    assert any(item["field"] == "preferred_locations" and item["previous"] == "上海" and item["current"] == "北京" for item in memory["conflicts"])
+    assert any(item["field"] == "episodic_events" and "张三" in item["current"] for item in memory["conflicts"])
+    assert not any(event["type"] == "favorited" and event["tutor_name"] == "张三" for event in memory["episodic_events"])
+    assert any(event["type"] == "rejected" and event["tutor_name"] == "张三" for event in memory["episodic_events"])
+
+
 def test_memory_builds_reflections():
     client = TestClient(app)
     session_id = "reflection-session"
