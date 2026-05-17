@@ -334,7 +334,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 - [x] Episodic Memory：记录用户联系过的导师、反馈、拒绝、偏好变化
 - [x] Semantic Memory：抽象用户长期研究兴趣和申请策略
-- [ ] Procedural Memory：记录用户偏好的申请流程与材料准备方式
+- [x] Procedural Memory：记录用户偏好的申请流程与材料准备方式
 - [ ] Memory Retrieval：回答时检索相关历史记忆
 - [ ] Memory Reflection：定期总结用户长期目标变化
 - [ ] Memory Conflict Resolution：处理用户偏好冲突
@@ -377,6 +377,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 4. **高级长期记忆**
    - [x] 实现 Episodic Memory：记录联系过、收藏、排除、反馈过的导师。
    - [x] 实现 Semantic Memory：抽象长期研究兴趣和申请策略。
+   - [x] 实现 Procedural Memory：记录申请流程、材料准备、沟通和时间安排偏好。
    - [ ] 实现 Memory Retrieval：回答时检索相关历史记忆。
 5. **研究级 RAG 继续增强**
    - [ ] 接入 BGE-M3 / bge-large-zh embedding。

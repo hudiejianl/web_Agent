@@ -57,6 +57,25 @@ def test_chat_returns_tutor_recommendations():
     assert plan_response.json()["plan_id"] == plan_runs[0]["plan_id"]
 
 
+def test_memory_builds_procedural_profile():
+    client = TestClient(app)
+    session_id = "procedural-session"
+    response = client.post(
+        "/api/chat",
+        json={"session_id": session_id, "message": "我希望先查论文和主页再联系导师，帮我准备中文邮件模板和简历，表达要简洁正式，并按时间线定期跟进"},
+    )
+    assert response.status_code == 200
+    procedural = response.json()["memory"]["procedural"]
+
+    assert "先查论文和主页再联系" in procedural["workflow_preferences"]
+    assert "偏好邮件模板" in procedural["material_preferences"]
+    assert "偏好简历优化" in procedural["material_preferences"]
+    assert "沟通风格偏正式" in procedural["communication_preferences"]
+    assert "希望表达简洁直接" in procedural["communication_preferences"]
+    assert "需要申请时间线" in procedural["scheduling_preferences"]
+    assert "需要定期跟进" in procedural["scheduling_preferences"]
+
+
 def test_memory_builds_semantic_profile():
     client = TestClient(app)
     session_id = "semantic-session"

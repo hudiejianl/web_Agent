@@ -26,6 +26,26 @@ RISK_KEYWORDS = {
     "排除用户明确不考虑的导师": ["不要", "不考虑", "排除", "不喜欢", "不合适"],
     "需核实导师最新招生状态": ["不确定", "是否招生", "还招生", "招生状态"],
 }
+WORKFLOW_PREFERENCE_KEYWORDS = {
+    "先筛选导师再准备材料": ["先筛选", "先找导师", "再准备材料"],
+    "先查论文和主页再联系": ["先查论文", "先看主页", "再联系"],
+    "按优先级分批联系导师": ["分批联系", "按优先级", "优先联系"],
+}
+MATERIAL_PREFERENCE_KEYWORDS = {
+    "偏好邮件模板": ["邮件模板", "套磁信", "邮件"],
+    "偏好简历优化": ["简历", "CV", "履历"],
+    "偏好研究计划书": ["研究计划", "研究计划书", "proposal"],
+}
+COMMUNICATION_PREFERENCE_KEYWORDS = {
+    "沟通风格偏正式": ["正式", "礼貌", "规范"],
+    "希望表达简洁直接": ["简洁", "直接", "短一点"],
+    "需要中文沟通材料": ["中文", "中文邮件", "中文材料"],
+    "需要英文沟通材料": ["英文", "英文邮件", "英文材料"],
+}
+SCHEDULING_PREFERENCE_KEYWORDS = {
+    "需要申请时间线": ["时间线", "截止日期", "ddl", "deadline"],
+    "需要定期跟进": ["定期", "每周", "跟进", "提醒"],
+}
 EVENT_PATTERNS = {
     "contacted": ["联系", "发邮件", "套磁", "沟通"],
     "favorited": ["收藏", "关注", "感兴趣", "优先考虑"],
@@ -62,6 +82,7 @@ class MemoryAgent:
                 memory.profile.target_degree = keyword
         memory.episodic_events = self._merge_events(memory.episodic_events, self._extract_events(user_message))
         self._update_semantic_memory(memory, user_message)
+        self._update_procedural_memory(memory, user_message)
         memory.recent_messages = self.repository.recent_messages(session_id, self.settings.max_context_messages)
         if len(memory.recent_messages) >= self.settings.summary_trigger_messages:
             memory.summary = self._compress(memory)
@@ -72,6 +93,12 @@ class MemoryAgent:
         memory.semantic.application_strategy = self._merge_text_items(memory.semantic.application_strategy, self._match_labels(message, STRATEGY_KEYWORDS))
         memory.semantic.advisor_preferences = self._merge_text_items(memory.semantic.advisor_preferences, self._match_labels(message, ADVISOR_PREFERENCE_KEYWORDS))
         memory.semantic.risk_flags = self._merge_text_items(memory.semantic.risk_flags, self._match_labels(message, RISK_KEYWORDS))
+
+    def _update_procedural_memory(self, memory: MemoryState, message: str) -> None:
+        memory.procedural.workflow_preferences = self._merge_text_items(memory.procedural.workflow_preferences, self._match_labels(message, WORKFLOW_PREFERENCE_KEYWORDS))
+        memory.procedural.material_preferences = self._merge_text_items(memory.procedural.material_preferences, self._match_labels(message, MATERIAL_PREFERENCE_KEYWORDS))
+        memory.procedural.communication_preferences = self._merge_text_items(memory.procedural.communication_preferences, self._match_labels(message, COMMUNICATION_PREFERENCE_KEYWORDS))
+        memory.procedural.scheduling_preferences = self._merge_text_items(memory.procedural.scheduling_preferences, self._match_labels(message, SCHEDULING_PREFERENCE_KEYWORDS))
 
     def _match_labels(self, message: str, patterns: dict[str, list[str]]) -> list[str]:
         return [label for label, keywords in patterns.items() if any(keyword in message for keyword in keywords)]
@@ -118,5 +145,9 @@ class MemoryAgent:
         strategy = "、".join(memory.semantic.application_strategy) or "未明确"
         preferences = "、".join(memory.semantic.advisor_preferences) or "未明确"
         risks = "、".join(memory.semantic.risk_flags) or "暂无"
+        workflow = "、".join(memory.procedural.workflow_preferences) or "未明确"
+        materials = "、".join(memory.procedural.material_preferences) or "未明确"
+        communication = "、".join(memory.procedural.communication_preferences) or "未明确"
+        schedule = "、".join(memory.procedural.scheduling_preferences) or "未明确"
         recent = "；".join(f"{item['role']}：{item['content'][:60]}" for item in memory.recent_messages[-4:])
-        return f"用户关注方向：{interests}；地区偏好：{locations}；目标阶段：{degree}。申请策略：{strategy}；导师偏好：{preferences}；风险提示：{risks}。近期事件：{events}。近期对话：{recent}"
+        return f"用户关注方向：{interests}；地区偏好：{locations}；目标阶段：{degree}。申请策略：{strategy}；导师偏好：{preferences}；风险提示：{risks}。流程偏好：{workflow}；材料偏好：{materials}；沟通偏好：{communication}；时间安排：{schedule}。近期事件：{events}。近期对话：{recent}"
