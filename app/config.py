@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     max_browser_navigation_pages: int = 8
     browser_fetch_retries: int = 2
     embedding_model: str = "hashing"
+    embedding_provider: str = "local"
+    embedding_api_key: str = ""
+    embedding_base_url: str = ""
+    embedding_timeout_seconds: int = 30
     llm_provider: str = "none"
     llm_model: str = ""
     anthropic_api_key: str = ""

@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import math
 
+import requests
+
 from app.config import get_settings
 
 
@@ -24,8 +26,31 @@ class HashingEmbeddingFunction:
         return [value / norm for value in vector]
 
 
+class OpenAICompatibleEmbeddingFunction:
+    def __init__(self, model: str, api_key: str, base_url: str, timeout_seconds: int = 30):
+        self.model = model
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self.timeout_seconds = timeout_seconds
+
+    def __call__(self, input: list[str]) -> list[list[float]]:
+        response = requests.post(
+            f"{self.base_url}/embeddings",
+            headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
+            json={"model": self.model, "input": input},
+            timeout=self.timeout_seconds,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        data = sorted(payload.get("data", []), key=lambda item: item.get("index", 0))
+        return [item["embedding"] for item in data]
+
+
 def get_embedding_function():
     settings = get_settings()
+    if settings.embedding_provider == "openai-compatible" and settings.embedding_api_key:
+        base_url = settings.embedding_base_url or settings.openai_base_url
+        return OpenAICompatibleEmbeddingFunction(settings.embedding_model, settings.embedding_api_key, base_url, settings.embedding_timeout_seconds)
     if settings.embedding_model == "hashing":
         return HashingEmbeddingFunction()
     try:

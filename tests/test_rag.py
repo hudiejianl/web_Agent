@@ -1,6 +1,7 @@
 from app.eval.rag_eval import RAGEvaluator
 from app.models.schemas import TutorProfile
 from app.rag.bm25 import BM25Retriever
+from app.rag.embeddings import HashingEmbeddingFunction, OpenAICompatibleEmbeddingFunction, get_embedding_function
 from app.rag.evidence import RetrievalEvidenceBuilder
 from app.rag.reranker import TutorReranker
 from app.rag.retriever import TutorRetriever
@@ -37,6 +38,44 @@ def test_retrieval_evidence_builder_highlights_matching_fields():
     assert evidence[0].tutor_name == "张三"
     assert any(item.field == "research_areas" for item in evidence)
     assert any("**" in item.snippet for item in evidence)
+
+
+def test_openai_compatible_embedding_function_calls_embeddings_api(monkeypatch):
+    calls = []
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"data": [{"index": 1, "embedding": [0.3, 0.4]}, {"index": 0, "embedding": [0.1, 0.2]}]}
+
+    def fake_post(url, headers, json, timeout):
+        calls.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
+        return FakeResponse()
+
+    monkeypatch.setattr("app.rag.embeddings.requests.post", fake_post)
+    embeddings = OpenAICompatibleEmbeddingFunction("text-embedding-demo", "secret", "https://api.example.com/v1", 12)(["a", "b"])
+
+    assert embeddings == [[0.1, 0.2], [0.3, 0.4]]
+    assert calls[0]["url"] == "https://api.example.com/v1/embeddings"
+    assert calls[0]["headers"]["Authorization"] == "Bearer secret"
+    assert calls[0]["json"] == {"model": "text-embedding-demo", "input": ["a", "b"]}
+    assert calls[0]["timeout"] == 12
+
+
+def test_embedding_function_falls_back_without_api_key(monkeypatch):
+    class FakeSettings:
+        embedding_provider = "openai-compatible"
+        embedding_api_key = ""
+        embedding_base_url = "https://api.example.com/v1"
+        openai_base_url = "https://api.openai.com/v1"
+        embedding_model = "hashing"
+        embedding_timeout_seconds = 30
+
+    monkeypatch.setattr("app.rag.embeddings.get_settings", lambda: FakeSettings())
+
+    assert isinstance(get_embedding_function(), HashingEmbeddingFunction)
 
 
 def test_reranker_prioritizes_query_aligned_profiles():
