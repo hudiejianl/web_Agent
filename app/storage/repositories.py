@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-from app.models.schemas import AgentPlan, AgentPlanRun, AgentTrace, AgentTraceRun, MemoryState, TutorProfile
+from app.models.schemas import AgentPlan, AgentPlanRun, AgentTrace, AgentTraceRun, MemoryState, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, TutorProfile
 from app.storage.database import get_connection
 
 
@@ -101,6 +101,31 @@ class TraceRepository:
                 (session_id, limit),
             ).fetchall()
         return [AgentTraceRun.model_validate_json(row["payload"]) for row in rows]
+
+
+class RAGEvaluationRepository:
+    def save(self, source: str, payload: RAGEvaluationResponse | RAGEvaluationComparisonResponse | RAGEvaluationReportResponse) -> RAGEvaluationRun:
+        run = RAGEvaluationRun(evaluation_id=str(uuid4()), source=source, payload=payload)
+        with get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO rag_evaluation_runs (evaluation_id, source, payload, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (run.evaluation_id, run.source, run.model_dump_json(), run.created_at.isoformat()),
+            )
+            connection.commit()
+        return run
+
+    def get(self, evaluation_id: str) -> RAGEvaluationRun | None:
+        with get_connection() as connection:
+            row = connection.execute("SELECT payload FROM rag_evaluation_runs WHERE evaluation_id = ?", (evaluation_id,)).fetchone()
+        return RAGEvaluationRun.model_validate_json(row["payload"]) if row else None
+
+    def list(self, limit: int = 20) -> list[RAGEvaluationRun]:
+        with get_connection() as connection:
+            rows = connection.execute("SELECT payload FROM rag_evaluation_runs ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+        return [RAGEvaluationRun.model_validate_json(row["payload"]) for row in rows]
 
 
 class MemoryRepository:

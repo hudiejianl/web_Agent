@@ -211,6 +211,16 @@ def test_rag_evaluation_endpoint():
     assert "faithfulness" in payload["cases"][0]
     assert [item["strategy"] for item in report_payload["comparison"]["strategies"]] == ["baseline", "hybrid", "reranker"]
 
+    runs_response = client.get("/api/eval/rag/runs?limit=3")
+    assert runs_response.status_code == 200
+    runs = runs_response.json()["runs"]
+    assert runs
+    assert {item["source"] for item in runs} & {"single", "compare", "report"}
+
+    run_response = client.get(f"/api/eval/rag/runs/{runs[0]['evaluation_id']}")
+    assert run_response.status_code == 200
+    assert run_response.json()["evaluation_id"] == runs[0]["evaluation_id"]
+
 
 def test_api_errors_have_consistent_shape():
     client = TestClient(app)

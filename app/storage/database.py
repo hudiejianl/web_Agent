@@ -50,6 +50,16 @@ CREATE TABLE IF NOT EXISTS agent_plans (
 
 CREATE INDEX IF NOT EXISTS idx_agent_plans_session_created
 ON agent_plans (session_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS rag_evaluation_runs (
+    evaluation_id TEXT PRIMARY KEY,
+    source TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_rag_evaluation_runs_created
+ON rag_evaluation_runs (created_at DESC);
 """
 
 

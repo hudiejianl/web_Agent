@@ -333,3 +333,14 @@ class RAGEvaluationComparisonResponse(BaseModel):
 class RAGEvaluationReportResponse(BaseModel):
     markdown: str
     comparison: RAGEvaluationComparisonResponse
+
+
+class RAGEvaluationRun(BaseModel):
+    evaluation_id: str
+    source: Literal["single", "compare", "report"]
+    payload: RAGEvaluationResponse | RAGEvaluationComparisonResponse | RAGEvaluationReportResponse
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class RAGEvaluationRunResponse(BaseModel):
+    runs: list[RAGEvaluationRun] = Field(default_factory=list)

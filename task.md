@@ -386,7 +386,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 实现 chunking 策略，后续继续评估不同 chunk size。
 6. **评估系统完善**
    - [x] 增加 Faithfulness 评估。
-   - [ ] 保存历史评估结果。
+   - [x] 保存历史评估结果。
    - [ ] 对比不同 embedding、reranker 和 chunking 配置。
 7. **Browser Agent 深度增强**
    - [ ] 支持导师列表页分页识别。
