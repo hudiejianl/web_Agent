@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from app.config import get_settings
-from app.models.schemas import MemoryEvent, MemoryState
+from app.models.schemas import MemoryEvent, MemoryState, RelevantMemory
 from app.storage.repositories import MemoryRepository
 
 
@@ -67,6 +67,25 @@ class MemoryAgent:
         memory.recent_messages = self.repository.recent_messages(session_id, self.settings.max_context_messages)
         return memory
 
+    def retrieve_relevant(self, memory: MemoryState, query: str, limit: int = 8) -> list[RelevantMemory]:
+        query_terms = self._query_terms(query)
+        candidates: list[RelevantMemory] = []
+        for item in memory.semantic.research_focus:
+            candidates.append(RelevantMemory(type="research_focus", content=item, score=self._memory_score(item, query_terms)))
+        for item in memory.semantic.application_strategy:
+            candidates.append(RelevantMemory(type="application_strategy", content=item, score=self._memory_score(item, query_terms) + 0.2))
+        for item in memory.semantic.advisor_preferences:
+            candidates.append(RelevantMemory(type="advisor_preference", content=item, score=self._memory_score(item, query_terms) + 0.2))
+        for item in memory.semantic.risk_flags:
+            candidates.append(RelevantMemory(type="risk_flag", content=item, score=self._memory_score(item, query_terms) + 0.3))
+        for item in [*memory.procedural.workflow_preferences, *memory.procedural.material_preferences, *memory.procedural.communication_preferences, *memory.procedural.scheduling_preferences]:
+            candidates.append(RelevantMemory(type="procedural_preference", content=item, score=self._memory_score(item, query_terms) + 0.1))
+        for event in memory.episodic_events:
+            content = f"{event.type}:{event.tutor_name or '未指明'}:{event.note}"
+            candidates.append(RelevantMemory(type="episodic_event", content=content, score=self._memory_score(content, query_terms) + 0.4))
+        ranked = sorted(candidates, key=lambda item: item.score, reverse=True)
+        return [item for item in ranked if item.score > 0][:limit]
+
     def update(self, session_id: str, user_message: str, assistant_message: str) -> MemoryState:
         memory = self.load(session_id)
         self.repository.append_message(session_id, "user", user_message)
@@ -87,6 +106,17 @@ class MemoryAgent:
         if len(memory.recent_messages) >= self.settings.summary_trigger_messages:
             memory.summary = self._compress(memory)
         return self.repository.save(memory)
+
+    def _query_terms(self, query: str) -> set[str]:
+        terms = {keyword for keyword in [*INTEREST_KEYWORDS, *LOCATION_KEYWORDS, *DEGREE_KEYWORDS] if keyword.lower() in query.lower()}
+        terms.update({item for item in re.split(r"\s+|，|。|、", query) if len(item) >= 2})
+        return terms
+
+    def _memory_score(self, content: str, query_terms: set[str]) -> float:
+        if not query_terms:
+            return 0.1
+        matched = sum(1 for term in query_terms if term and term.lower() in content.lower())
+        return matched / len(query_terms)
 
     def _update_semantic_memory(self, memory: MemoryState, message: str) -> None:
         memory.semantic.research_focus = self._merge_text_items(memory.semantic.research_focus, memory.profile.research_interests)

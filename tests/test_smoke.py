@@ -110,6 +110,24 @@ def test_memory_records_episodic_events():
     assert memory_response.json()["episodic_events"]
 
 
+def test_chat_uses_relevant_memory_in_answer():
+    client = TestClient(app)
+    session_id = "memory-retrieval-session"
+    first = client.post(
+        "/api/chat",
+        json={"session_id": session_id, "message": "我已经联系了张三老师，想找多模态方向硕士，并且希望先查论文和主页再联系导师"},
+    )
+    assert first.status_code == 200
+
+    second = client.post("/api/chat", json={"session_id": session_id, "message": "继续帮我推荐多模态方向导师"})
+    assert second.status_code == 200
+    payload = second.json()
+
+    assert "历史记忆参考" in payload["answer"]
+    assert "多模态" in payload["answer"]
+    assert any(item["action"] == "retrieve_relevant_memory" and item["metadata"]["memory_count"] > 0 for item in payload["trace"])
+
+
 def test_chat_replans_with_previous_constraints():
     client = TestClient(app)
     session_id = "replan-session"

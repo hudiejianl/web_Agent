@@ -7,7 +7,7 @@ from langgraph.graph import END, StateGraph
 from app.agents.advisor_agent import AdvisorAgent
 from app.agents.memory_agent import MemoryAgent
 from app.agents.planner_agent import PlannerAgent
-from app.models.schemas import AgentPlan, AgentTrace, MemoryState, RetrievalEvidence, TutorProfile
+from app.models.schemas import AgentPlan, AgentTrace, MemoryState, RelevantMemory, RetrievalEvidence, TutorProfile
 from app.rag.evidence import RetrievalEvidenceBuilder
 from app.rag.retriever import TutorRetriever
 from app.services.ingestion import IngestionService
@@ -21,6 +21,7 @@ class AdmissionState(TypedDict, total=False):
     plan: AgentPlan
     tutors: list[TutorProfile]
     retrieval_evidence: list[RetrievalEvidence]
+    relevant_memories: list[RelevantMemory]
     ingested_tutors: list[TutorProfile]
     answer: str
     trace: list[AgentTrace]
@@ -61,12 +62,21 @@ class AdmissionGraph:
     def _load_memory(self, state: AdmissionState) -> AdmissionState:
         state["trace"] = []
         state["memory"] = self.memory_agent.load(state["session_id"])
+        state["relevant_memories"] = self.memory_agent.retrieve_relevant(state["memory"], state["message"])
         self._trace(
             state,
             "Memory Agent",
             "load_memory",
             "completed",
             f"加载会话 {state['session_id']} 的长期记忆，已记录 {len(state['memory'].recent_messages)} 条近期消息",
+        )
+        self._trace(
+            state,
+            "Memory Agent",
+            "retrieve_relevant_memory",
+            "completed",
+            f"召回 {len(state['relevant_memories'])} 条相关历史记忆",
+            {"memory_count": len(state["relevant_memories"])},
         )
         return state
 
@@ -160,6 +170,7 @@ class AdmissionGraph:
             state["memory"],
             state.get("plan"),
             state.get("retrieval_evidence", []),
+            state.get("relevant_memories", []),
         )
         if llm_result.used_fallback:
             self._trace(

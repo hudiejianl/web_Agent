@@ -110,6 +110,12 @@ class ProceduralMemory(BaseModel):
     scheduling_preferences: list[str] = Field(default_factory=list)
 
 
+class RelevantMemory(BaseModel):
+    type: str
+    content: str
+    score: float = 0.0
+
+
 # 长期记忆保存用户画像、事件记忆、语义记忆、流程记忆、近期对话和压缩摘要，用于多轮咨询上下文延续。
 class MemoryState(BaseModel):
     session_id: str
