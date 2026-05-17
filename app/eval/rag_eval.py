@@ -25,6 +25,7 @@ class RAGEvaluator:
             recall=self._average([result.recall for result in results]),
             precision=self._average([result.precision for result in results]),
             relevance=self._average([result.relevance for result in results]),
+            faithfulness=self._average([result.faithfulness for result in results]),
             cases=results,
         )
 
@@ -52,6 +53,7 @@ class RAGEvaluator:
             recall=round(recall, 4),
             precision=round(precision, 4),
             relevance=round(self._relevance(case, retrieved), 4),
+            faithfulness=round(self._faithfulness(case, retrieved), 4),
         )
 
     def load_cases(self) -> list[RAGEvaluationCase]:
@@ -70,21 +72,35 @@ class RAGEvaluator:
             scores.append(matched / len(case.relevant_terms))
         return sum(scores) / len(scores)
 
+    def _faithfulness(self, case: RAGEvaluationCase, profiles: list[TutorProfile]) -> float:
+        if not profiles:
+            return 0.0
+        terms = case.relevant_terms or [item for item in case.query.replace("，", " ").replace("。", " ").replace("、", " ").split() if item]
+        if not terms:
+            return 0.0
+        supported = 0
+        for profile in profiles:
+            document = profile.document_text().lower()
+            if any(term.lower() in document for term in terms):
+                supported += 1
+        return supported / len(profiles)
+
     def _render_markdown_report(self, comparison: RAGEvaluationComparisonResponse) -> str:
         lines = [
             "# RAG Evaluation Report",
             "",
             "## Strategy Summary",
             "",
-            "| Strategy | Cases | Recall | Precision | Relevance |",
-            "| --- | ---: | ---: | ---: | ---: |",
+            "| Strategy | Cases | Recall | Precision | Relevance | Faithfulness |",
+            "| --- | ---: | ---: | ---: | ---: | ---: |",
         ]
         for result in comparison.strategies:
-            lines.append(f"| {result.strategy} | {result.case_count} | {result.recall:.4f} | {result.precision:.4f} | {result.relevance:.4f} |")
+            lines.append(f"| {result.strategy} | {result.case_count} | {result.recall:.4f} | {result.precision:.4f} | {result.relevance:.4f} | {result.faithfulness:.4f} |")
 
         best_recall = self._best_strategy(comparison, "recall")
         best_precision = self._best_strategy(comparison, "precision")
         best_relevance = self._best_strategy(comparison, "relevance")
+        best_faithfulness = self._best_strategy(comparison, "faithfulness")
         lines.extend([
             "",
             "## Best Strategies",
@@ -92,6 +108,7 @@ class RAGEvaluator:
             f"- Best Recall: {best_recall.strategy} ({best_recall.recall:.4f})" if best_recall else "- Best Recall: N/A",
             f"- Best Precision: {best_precision.strategy} ({best_precision.precision:.4f})" if best_precision else "- Best Precision: N/A",
             f"- Best Relevance: {best_relevance.strategy} ({best_relevance.relevance:.4f})" if best_relevance else "- Best Relevance: N/A",
+            f"- Best Faithfulness: {best_faithfulness.strategy} ({best_faithfulness.faithfulness:.4f})" if best_faithfulness else "- Best Faithfulness: N/A",
             "",
             "## Case Details",
             "",
@@ -105,7 +122,7 @@ class RAGEvaluator:
                     f"- `{case.case_id}` {case.query}",
                     f"  - Expected: {expected}",
                     f"  - Retrieved: {retrieved}",
-                    f"  - Recall / Precision / Relevance: {case.recall:.4f} / {case.precision:.4f} / {case.relevance:.4f}",
+                    f"  - Recall / Precision / Relevance / Faithfulness: {case.recall:.4f} / {case.precision:.4f} / {case.relevance:.4f} / {case.faithfulness:.4f}",
                 ])
             lines.append("")
         lines.extend([

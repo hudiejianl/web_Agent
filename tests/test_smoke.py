@@ -206,7 +206,9 @@ def test_rag_evaluation_endpoint():
     assert report_response.status_code == 200
     report_payload = report_response.json()
     assert "# RAG Evaluation Report" in report_payload["markdown"]
-    assert "| Strategy | Cases | Recall | Precision | Relevance |" in report_payload["markdown"]
+    assert "| Strategy | Cases | Recall | Precision | Relevance | Faithfulness |" in report_payload["markdown"]
+    assert "faithfulness" in payload
+    assert "faithfulness" in payload["cases"][0]
     assert [item["strategy"] for item in report_payload["comparison"]["strategies"]] == ["baseline", "hybrid", "reranker"]
 
 

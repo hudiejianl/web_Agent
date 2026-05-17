@@ -320,7 +320,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 评估 Recall
 - [x] 评估 Precision
 - [x] 评估 Relevance
-- [ ] 评估 Faithfulness
+- [x] 评估 Faithfulness
 - [ ] 对比不同 embedding 模型
 - [ ] 对比不同 chunk size
 - [x] 对比有无 reranker / hybrid retrieval
@@ -385,7 +385,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [ ] 接入 bge-reranker / jina-reranker。
    - [x] 实现 chunking 策略，后续继续评估不同 chunk size。
 6. **评估系统完善**
-   - [ ] 增加 Faithfulness 评估。
+   - [x] 增加 Faithfulness 评估。
    - [ ] 保存历史评估结果。
    - [ ] 对比不同 embedding、reranker 和 chunking 配置。
 7. **Browser Agent 深度增强**

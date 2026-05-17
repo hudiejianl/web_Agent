@@ -158,6 +158,8 @@ def test_rag_evaluator_computes_metrics():
     assert result.recall == 1.0
     assert result.precision == 1.0
     assert result.relevance > 0
+    assert result.faithfulness == 1.0
+    assert 0 <= comparison.strategies[0].faithfulness <= 1
     assert [item.strategy for item in comparison.strategies] == ["baseline", "hybrid", "reranker"]
 
 

@@ -313,6 +313,7 @@ class RAGEvaluationCaseResult(BaseModel):
     recall: float
     precision: float
     relevance: float
+    faithfulness: float
 
 
 class RAGEvaluationResponse(BaseModel):
@@ -321,6 +322,7 @@ class RAGEvaluationResponse(BaseModel):
     recall: float
     precision: float
     relevance: float
+    faithfulness: float
     cases: list[RAGEvaluationCaseResult] = Field(default_factory=list)
 
 
