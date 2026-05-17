@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     embedding_api_key: str = ""
     embedding_base_url: str = ""
     embedding_timeout_seconds: int = 30
+    rag_chunk_size: int = 600
+    rag_chunk_overlap: int = 120
     llm_provider: str = "none"
     llm_model: str = ""
     anthropic_api_key: str = ""

@@ -5,6 +5,7 @@ from app.rag.embeddings import HashingEmbeddingFunction, OpenAICompatibleEmbeddi
 from app.rag.evidence import RetrievalEvidenceBuilder
 from app.rag.reranker import TutorReranker
 from app.rag.retriever import TutorRetriever
+from app.rag.vector_store import VectorStore, chunk_text
 
 
 def test_bm25_prioritizes_keyword_matches():
@@ -38,6 +39,53 @@ def test_retrieval_evidence_builder_highlights_matching_fields():
     assert evidence[0].tutor_name == "张三"
     assert any(item.field == "research_areas" for item in evidence)
     assert any("**" in item.snippet for item in evidence)
+
+
+def test_chunk_text_respects_size_and_overlap():
+    chunks = chunk_text("abcdefghijklmnopqrstuvwxyz", chunk_size=10, overlap=3)
+
+    assert chunks == ["abcdefghij", "hijklmnopq", "opqrstuvwx", "vwxyz"]
+
+
+def test_vector_store_indexes_chunks_and_returns_unique_tutor_ids(monkeypatch):
+    class FakeSettings:
+        chroma_path = "data/runtime/test-chroma"
+        chroma_collection = "test-tutors"
+        rag_chunk_size = 20
+        rag_chunk_overlap = 5
+
+    class FakeCollection:
+        def __init__(self):
+            self.upsert_payload = None
+
+        def upsert(self, ids, documents, metadatas):
+            self.upsert_payload = {"ids": ids, "documents": documents, "metadatas": metadatas}
+
+        def query(self, query_texts, n_results):
+            return {
+                "ids": [["tutor-1::chunk::1", "tutor-1::chunk::0", "tutor-2::chunk::0"]],
+                "metadatas": [[{"tutor_id": "tutor-1"}, {"tutor_id": "tutor-1"}, {"tutor_id": "tutor-2"}]],
+            }
+
+    class FakeClient:
+        def __init__(self):
+            self.collection = FakeCollection()
+
+        def get_or_create_collection(self, name, embedding_function, metadata):
+            return self.collection
+
+    fake_client = FakeClient()
+    monkeypatch.setattr("app.rag.vector_store.get_settings", lambda: FakeSettings())
+    monkeypatch.setattr("app.rag.vector_store.chromadb.PersistentClient", lambda path, settings: fake_client)
+    monkeypatch.setattr("app.rag.vector_store.get_embedding_function", lambda: object())
+
+    store = VectorStore()
+    profile = TutorProfile(id="tutor-1", name="张三", institution="示例大学", summary="人工智能" * 20)
+    store.upsert_tutor(profile)
+
+    assert len(fake_client.collection.upsert_payload["ids"]) > 1
+    assert all(metadata["tutor_id"] == "tutor-1" for metadata in fake_client.collection.upsert_payload["metadatas"])
+    assert store.query("人工智能", limit=2) == ["tutor-1", "tutor-2"]
 
 
 def test_openai_compatible_embedding_function_calls_embeddings_api(monkeypatch):
