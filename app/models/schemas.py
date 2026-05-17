@@ -116,6 +116,12 @@ class RelevantMemory(BaseModel):
     score: float = 0.0
 
 
+class MemoryReflection(BaseModel):
+    topic: Literal["long_term_goal", "strategy", "workflow", "risk", "interaction"]
+    content: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 # 长期记忆保存用户画像、事件记忆、语义记忆、流程记忆、近期对话和压缩摘要，用于多轮咨询上下文延续。
 class MemoryState(BaseModel):
     session_id: str
@@ -125,6 +131,7 @@ class MemoryState(BaseModel):
     episodic_events: list[MemoryEvent] = Field(default_factory=list)
     semantic: SemanticMemory = Field(default_factory=SemanticMemory)
     procedural: ProceduralMemory = Field(default_factory=ProceduralMemory)
+    reflections: list[MemoryReflection] = Field(default_factory=list)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 

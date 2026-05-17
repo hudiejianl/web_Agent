@@ -118,6 +118,7 @@ def test_chat_uses_relevant_memory_in_answer():
         json={"session_id": session_id, "message": "我已经联系了张三老师，想找多模态方向硕士，并且希望先查论文和主页再联系导师"},
     )
     assert first.status_code == 200
+    assert first.json()["memory"]["reflections"]
 
     second = client.post("/api/chat", json={"session_id": session_id, "message": "继续帮我推荐多模态方向导师"})
     assert second.status_code == 200
@@ -125,7 +126,24 @@ def test_chat_uses_relevant_memory_in_answer():
 
     assert "历史记忆参考" in payload["answer"]
     assert "多模态" in payload["answer"]
+    assert "reflection:" in payload["answer"]
     assert any(item["action"] == "retrieve_relevant_memory" and item["metadata"]["memory_count"] > 0 for item in payload["trace"])
+
+
+def test_memory_builds_reflections():
+    client = TestClient(app)
+    session_id = "reflection-session"
+    response = client.post(
+        "/api/chat",
+        json={"session_id": session_id, "message": "我想找多模态和RAG方向硕士，偏好顶会论文和主页信息完整，先查论文和主页再联系，风险是不确定是否招生"},
+    )
+    assert response.status_code == 200
+    reflections = response.json()["memory"]["reflections"]
+
+    assert any(item["topic"] == "long_term_goal" and "多模态" in item["content"] for item in reflections)
+    assert any(item["topic"] == "strategy" and "顶会论文导向" in item["content"] for item in reflections)
+    assert any(item["topic"] == "workflow" and "先查论文和主页再联系" in item["content"] for item in reflections)
+    assert any(item["topic"] == "risk" and "需核实导师最新招生状态" in item["content"] for item in reflections)
 
 
 def test_chat_replans_with_previous_constraints():

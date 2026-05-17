@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from app.config import get_settings
-from app.models.schemas import MemoryEvent, MemoryState, RelevantMemory
+from app.models.schemas import MemoryEvent, MemoryReflection, MemoryState, RelevantMemory
 from app.storage.repositories import MemoryRepository
 
 
@@ -83,6 +83,8 @@ class MemoryAgent:
         for event in memory.episodic_events:
             content = f"{event.type}:{event.tutor_name or '未指明'}:{event.note}"
             candidates.append(RelevantMemory(type="episodic_event", content=content, score=self._memory_score(content, query_terms) + 0.4))
+        for reflection in memory.reflections:
+            candidates.append(RelevantMemory(type=f"reflection:{reflection.topic}", content=reflection.content, score=self._memory_score(reflection.content, query_terms) + 0.35))
         ranked = sorted(candidates, key=lambda item: item.score, reverse=True)
         return [item for item in ranked if item.score > 0][:limit]
 
@@ -102,6 +104,7 @@ class MemoryAgent:
         memory.episodic_events = self._merge_events(memory.episodic_events, self._extract_events(user_message))
         self._update_semantic_memory(memory, user_message)
         self._update_procedural_memory(memory, user_message)
+        self._update_reflections(memory)
         memory.recent_messages = self.repository.recent_messages(session_id, self.settings.max_context_messages)
         if len(memory.recent_messages) >= self.settings.summary_trigger_messages:
             memory.summary = self._compress(memory)
@@ -129,6 +132,39 @@ class MemoryAgent:
         memory.procedural.material_preferences = self._merge_text_items(memory.procedural.material_preferences, self._match_labels(message, MATERIAL_PREFERENCE_KEYWORDS))
         memory.procedural.communication_preferences = self._merge_text_items(memory.procedural.communication_preferences, self._match_labels(message, COMMUNICATION_PREFERENCE_KEYWORDS))
         memory.procedural.scheduling_preferences = self._merge_text_items(memory.procedural.scheduling_preferences, self._match_labels(message, SCHEDULING_PREFERENCE_KEYWORDS))
+
+    def _update_reflections(self, memory: MemoryState) -> None:
+        reflections = list(memory.reflections)
+        candidates = [
+            self._build_reflection("long_term_goal", [*memory.semantic.research_focus, memory.profile.target_degree or ""]),
+            self._build_reflection("strategy", memory.semantic.application_strategy + memory.semantic.advisor_preferences),
+            self._build_reflection("workflow", memory.procedural.workflow_preferences + memory.procedural.material_preferences + memory.procedural.communication_preferences + memory.procedural.scheduling_preferences),
+            self._build_reflection("risk", memory.semantic.risk_flags),
+            self._build_reflection("interaction", [f"{event.type}:{event.tutor_name or '未指明'}" for event in memory.episodic_events[-8:]]),
+        ]
+        seen = {(item.topic, item.content) for item in reflections}
+        for reflection in candidates:
+            if reflection and (reflection.topic, reflection.content) not in seen:
+                reflections.append(reflection)
+                seen.add((reflection.topic, reflection.content))
+        memory.reflections = reflections[-20:]
+
+    def _build_reflection(self, topic: str, items: list[str]) -> MemoryReflection | None:
+        normalized = [item for item in dict.fromkeys(items) if item]
+        if not normalized:
+            return None
+        content = "、".join(normalized[:8])
+        if topic == "long_term_goal":
+            content = f"长期目标聚焦于 {content}"
+        elif topic == "strategy":
+            content = f"申请策略倾向于 {content}"
+        elif topic == "workflow":
+            content = f"偏好的申请执行方式包括 {content}"
+        elif topic == "risk":
+            content = f"后续推荐需要注意 {content}"
+        elif topic == "interaction":
+            content = f"近期导师互动状态包括 {content}"
+        return MemoryReflection(topic=topic, content=content)
 
     def _match_labels(self, message: str, patterns: dict[str, list[str]]) -> list[str]:
         return [label for label, keywords in patterns.items() if any(keyword in message for keyword in keywords)]
