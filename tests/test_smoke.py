@@ -385,6 +385,22 @@ def test_browser_research_clamps_configured_limits(monkeypatch):
     assert clamped.max_navigation_pages == 3
 
 
+def test_browser_research_discovers_pagination_links():
+    from app.services.browser_research import BrowserResearchService
+
+    service = BrowserResearchService()
+    links = [
+        {"text": "下一页", "url": "https://cs.example.edu.cn/faculty/page/2"},
+        {"text": "校外链接", "url": "https://other.example.com/page/2"},
+        {"text": "新闻", "url": "https://cs.example.edu.cn/news/1"},
+    ]
+
+    pagination = service._pagination_links(links, "https://cs.example.edu.cn/faculty")
+
+    assert [item.url for item in pagination] == ["https://cs.example.edu.cn/faculty/page/2"]
+    assert pagination[0].reason == "分页链接"
+
+
 def test_browser_research_scores_page_quality_and_confidence():
     from app.models.schemas import CandidateLink
     from app.services.browser_research import BrowserResearchService
@@ -419,7 +435,17 @@ def test_browser_research_endpoint(monkeypatch):
                 "url": url,
                 "title": "师资队伍 - 示例大学计算机学院",
                 "text": "教师队伍 人工智能 多模态",
-                "links": [{"text": "张三 教授 个人主页 研究方向 人工智能 多模态", "url": "https://cs.example.edu.cn/teacher/zhangsan"}],
+                "links": [
+                    {"text": "下一页", "url": "https://cs.example.edu.cn/faculty/page/2"},
+                    {"text": "张三 教授 个人主页 研究方向 人工智能 多模态", "url": "https://cs.example.edu.cn/teacher/zhangsan"},
+                ],
+            }
+        if url.endswith("/faculty/page/2"):
+            return {
+                "url": url,
+                "title": "师资队伍第 2 页 - 示例大学计算机学院",
+                "text": "教师队伍 大模型 智能体",
+                "links": [{"text": "李四 教授 个人主页 研究方向 大模型 智能体", "url": "https://cs.example.edu.cn/teacher/lisi"}],
             }
         return {
             "url": url,
@@ -452,7 +478,7 @@ def test_browser_research_endpoint(monkeypatch):
     assert payload["tutors"][0]["name"] == "张三"
     assert any(item["agent"] == "Query Rewriter Agent" for item in payload["trace"])
     assert any(item["action"] == "browse_search_page" and item["status"] == "failed" and item["metadata"]["error_type"] == "RuntimeError" for item in payload["trace"])
-    assert any(item["action"] == "discover_navigation_links" for item in payload["trace"])
+    assert any(item["action"] == "discover_navigation_links" and "识别分页 1" in item["detail"] for item in payload["trace"])
     assert any(item["agent"] == "Browser Agent" for item in payload["trace"])
 
     trace_response = client.get(f"/api/traces/{payload['trace_id']}")

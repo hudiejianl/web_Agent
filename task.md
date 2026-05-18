@@ -389,7 +389,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 保存历史评估结果。
    - [x] 对比不同 embedding、reranker 和 chunking 配置。
 7. **Browser Agent 深度增强**
-   - [ ] 支持导师列表页分页识别。
+   - [x] 支持导师列表页分页识别。
    - [ ] 支持更深链路导航：高校主页 → 学院主页 → 师资列表 → 导师主页 → 论文页。
    - [x] 增加页面质量评分和候选主页置信度。
 8. **部署与展示**

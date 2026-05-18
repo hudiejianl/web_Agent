@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 from app.agents.browser_agent import BrowserAgent, BrowserFetchError
 from app.config import get_settings
@@ -118,9 +118,16 @@ class BrowserResearchService:
         result_filter = SearchResultFilter(ResultFilterConfig(allowed_domains=tuple(allowed_domains), threshold=4.0))
         filter_query = " ".join([request.query, *rewritten_queries, "导师 教师 个人主页 研究方向"])
         collected = {candidate.url: candidate for candidate in candidates}
-        navigation_pages = candidates[: max(1, min(request.max_navigation_pages, len(candidates)))]
+        navigation_limit = max(1, min(request.max_navigation_pages, 30))
+        navigation_queue = candidates[: max(1, min(navigation_limit, len(candidates)))]
+        visited: set[str] = set()
         discovered_count = 0
-        for page_candidate in navigation_pages:
+        pagination_count = 0
+        while navigation_queue and len(visited) < navigation_limit:
+            page_candidate = navigation_queue.pop(0)
+            if page_candidate.url in visited:
+                continue
+            visited.add(page_candidate.url)
             try:
                 page = self.browser.fetch(page_candidate.url, use_playwright=request.use_playwright, actions=[])
                 page_candidate.status = "browsed"
@@ -129,6 +136,13 @@ class BrowserResearchService:
                 page_candidate.error = str(exc)[:300]
                 trace.append(self._trace("Browser Agent", "navigate_candidate_page", "failed", f"导航入口失败：{page_candidate.url}", self._error_metadata(exc)))
                 continue
+            for pagination in self._pagination_links(page.get("links", []), page_candidate.url):
+                if pagination.url not in collected:
+                    self._score_candidate_confidence(pagination)
+                    collected[pagination.url] = pagination
+                    pagination_count += 1
+                if pagination.url not in visited and len(visited) + len(navigation_queue) < navigation_limit:
+                    navigation_queue.append(pagination)
             for discovered in result_filter.filter_links(page.get("links", []), filter_query, page_candidate.url):
                 discovered.score += max(page_candidate.score * 0.2, 1.0)
                 self._score_candidate_confidence(discovered)
@@ -136,7 +150,7 @@ class BrowserResearchService:
                     collected[discovered.url] = discovered
                     discovered_count += 1
         expanded = sorted(collected.values(), key=lambda item: (item.confidence, item.score), reverse=True)[: max(1, min(request.max_candidates, 20))]
-        trace.append(self._trace("Browser Agent", "discover_navigation_links", "completed", f"导航式发现新增 {discovered_count} 个候选链接"))
+        trace.append(self._trace("Browser Agent", "discover_navigation_links", "completed", f"导航式发现新增 {discovered_count} 个候选链接，识别分页 {pagination_count} 个"))
         return expanded
 
     def _browse_and_ingest(self, request: BrowserResearchRequest, candidates: list[CandidateLink], trace: list[AgentTrace]) -> list[TutorProfile]:
@@ -161,6 +175,23 @@ class BrowserResearchService:
             if candidate.status == "pending":
                 candidate.status = "skipped"
         return tutors
+
+    def _pagination_links(self, links: object, source_url: str) -> list[CandidateLink]:
+        if not isinstance(links, list):
+            return []
+        source_host = urlparse(source_url).netloc
+        results: list[CandidateLink] = []
+        for raw in links:
+            if not isinstance(raw, dict):
+                continue
+            text = str(raw.get("text") or "").strip()
+            url = str(raw.get("url") or "").strip()
+            if not url.startswith("http") or urlparse(url).netloc != source_host:
+                continue
+            lower = f"{text} {url}".lower()
+            if any(token in lower for token in ["下一页", "下页", "next", "page", "p=", "page=", "index_", "list_"]):
+                results.append(CandidateLink(text=text[:160], url=url, source_url=source_url, score=6.0, reason="分页链接"))
+        return results
 
     def _page_quality(self, page: dict) -> float:
         text = page.get("text", "") or ""
