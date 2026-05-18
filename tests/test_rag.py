@@ -153,14 +153,19 @@ def test_rag_evaluator_computes_metrics():
     evaluator = RAGEvaluator(retriever=FakeRetriever())
     case = evaluator.load_cases()[0]
     result = evaluator.evaluate_case(case, limit=5)
+    evaluation = evaluator.evaluate(limit=5)
     comparison = evaluator.compare(limit=5)
+    config_comparison = evaluator.compare_configurations(limit=5)
 
     assert result.recall == 1.0
     assert result.precision == 1.0
     assert result.relevance > 0
     assert result.faithfulness == 1.0
+    assert evaluation.config.retrieval_strategy == "reranker"
     assert 0 <= comparison.strategies[0].faithfulness <= 1
     assert [item.strategy for item in comparison.strategies] == ["baseline", "hybrid", "reranker"]
+    assert len(config_comparison.configurations) >= 3
+    assert all(item.config for item in config_comparison.configurations)
 
 
 def test_hybrid_retriever_merges_dense_bm25_and_reranker_results():

@@ -316,6 +316,15 @@ class RAGEvaluationCaseResult(BaseModel):
     faithfulness: float
 
 
+class RAGConfigSnapshot(BaseModel):
+    embedding_provider: str = "local"
+    embedding_model: str = "hashing"
+    retrieval_strategy: str = "reranker"
+    chunk_size: int = 0
+    chunk_overlap: int = 0
+    reranker: str = "local"
+
+
 class RAGEvaluationResponse(BaseModel):
     strategy: str = "reranker"
     case_count: int
@@ -323,11 +332,16 @@ class RAGEvaluationResponse(BaseModel):
     precision: float
     relevance: float
     faithfulness: float
+    config: RAGConfigSnapshot | None = None
     cases: list[RAGEvaluationCaseResult] = Field(default_factory=list)
 
 
 class RAGEvaluationComparisonResponse(BaseModel):
     strategies: list[RAGEvaluationResponse] = Field(default_factory=list)
+
+
+class RAGConfigurationComparisonResponse(BaseModel):
+    configurations: list[RAGEvaluationResponse] = Field(default_factory=list)
 
 
 class RAGEvaluationReportResponse(BaseModel):
@@ -337,8 +351,8 @@ class RAGEvaluationReportResponse(BaseModel):
 
 class RAGEvaluationRun(BaseModel):
     evaluation_id: str
-    source: Literal["single", "compare", "report"]
-    payload: RAGEvaluationResponse | RAGEvaluationComparisonResponse | RAGEvaluationReportResponse
+    source: Literal["single", "compare", "report", "configurations"]
+    payload: RAGEvaluationResponse | RAGEvaluationComparisonResponse | RAGEvaluationReportResponse | RAGConfigurationComparisonResponse
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

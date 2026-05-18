@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
 from app.logging_config import configure_logging
-from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, TraceRunResponse
+from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, TraceRunResponse
 from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
 from app.services.browser_research import BrowserResearchService
@@ -149,6 +149,15 @@ def report_rag(limit: int = 5) -> RAGEvaluationReportResponse:
         raise HTTPException(status_code=403, detail="RAG evaluation is disabled by configuration")
     result = RAGEvaluator().report(limit=limit)
     RAGEvaluationRepository().save("report", result)
+    return result
+
+
+@app.get("/api/eval/rag/configurations", response_model=RAGConfigurationComparisonResponse)
+def compare_rag_configurations(limit: int = 5) -> RAGConfigurationComparisonResponse:
+    if not settings.enable_rag_eval:
+        raise HTTPException(status_code=403, detail="RAG evaluation is disabled by configuration")
+    result = RAGEvaluator().compare_configurations(limit=limit)
+    RAGEvaluationRepository().save("configurations", result)
     return result
 
 

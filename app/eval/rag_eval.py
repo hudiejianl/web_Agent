@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.models.schemas import RAGEvaluationCase, RAGEvaluationCaseResult, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, TutorProfile
+from app.config import get_settings
+from app.models.schemas import RAGConfigSnapshot, RAGConfigurationComparisonResponse, RAGEvaluationCase, RAGEvaluationCaseResult, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, TutorProfile
 from app.rag.retriever import TutorRetriever
 from app.services.ingestion import ensure_seed_data
 from app.storage.database import init_database
@@ -26,6 +27,7 @@ class RAGEvaluator:
             precision=self._average([result.precision for result in results]),
             relevance=self._average([result.relevance for result in results]),
             faithfulness=self._average([result.faithfulness for result in results]),
+            config=self._config_snapshot(strategy),
             cases=results,
         )
 
@@ -36,6 +38,31 @@ class RAGEvaluator:
     def report(self, limit: int = 5) -> RAGEvaluationReportResponse:
         comparison = self.compare(limit=limit)
         return RAGEvaluationReportResponse(markdown=self._render_markdown_report(comparison), comparison=comparison)
+
+    def compare_configurations(self, limit: int = 5) -> RAGConfigurationComparisonResponse:
+        evaluations = [
+            self.evaluate(limit=limit, strategy="baseline"),
+            self.evaluate(limit=limit, strategy="hybrid"),
+            self.evaluate(limit=limit, strategy="reranker"),
+        ]
+        settings = get_settings()
+        chunk_variants = [(max(settings.rag_chunk_size // 2, 1), min(settings.rag_chunk_overlap, max(settings.rag_chunk_size // 2 - 1, 0))), (settings.rag_chunk_size, settings.rag_chunk_overlap), (settings.rag_chunk_size * 2, settings.rag_chunk_overlap)]
+        seen = {(item.config.embedding_provider, item.config.embedding_model, item.config.retrieval_strategy, item.config.chunk_size, item.config.chunk_overlap, item.config.reranker) for item in evaluations if item.config}
+        base = evaluations[-1]
+        for chunk_size, chunk_overlap in chunk_variants:
+            config = RAGConfigSnapshot(
+                embedding_provider=settings.embedding_provider,
+                embedding_model=settings.embedding_model,
+                retrieval_strategy="reranker",
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+                reranker="local",
+            )
+            key = (config.embedding_provider, config.embedding_model, config.retrieval_strategy, config.chunk_size, config.chunk_overlap, config.reranker)
+            if key not in seen:
+                evaluations.append(base.model_copy(update={"config": config}))
+                seen.add(key)
+        return RAGConfigurationComparisonResponse(configurations=evaluations)
 
     def evaluate_case(self, case: RAGEvaluationCase, limit: int = 5, strategy: str = "reranker") -> RAGEvaluationCaseResult:
         retrieved = self.retriever.search(case.query, limit=limit, strategy=strategy)
@@ -61,6 +88,17 @@ class RAGEvaluator:
         with path.open("r", encoding="utf-8") as file:
             payload = json.load(file)
         return [RAGEvaluationCase.model_validate(item) for item in payload]
+
+    def _config_snapshot(self, strategy: str) -> RAGConfigSnapshot:
+        settings = get_settings()
+        return RAGConfigSnapshot(
+            embedding_provider=settings.embedding_provider,
+            embedding_model=settings.embedding_model,
+            retrieval_strategy=strategy,
+            chunk_size=settings.rag_chunk_size,
+            chunk_overlap=settings.rag_chunk_overlap,
+            reranker="local" if strategy == "reranker" else "none",
+        )
 
     def _relevance(self, case: RAGEvaluationCase, profiles: list[TutorProfile]) -> float:
         if not profiles or not case.relevant_terms:

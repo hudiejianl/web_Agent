@@ -321,8 +321,8 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 评估 Precision
 - [x] 评估 Relevance
 - [x] 评估 Faithfulness
-- [ ] 对比不同 embedding 模型
-- [ ] 对比不同 chunk size
+- [x] 对比不同 embedding 模型
+- [x] 对比不同 chunk size
 - [x] 对比有无 reranker / hybrid retrieval
 - [x] 输出评估报告
 
@@ -378,7 +378,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 实现 Episodic Memory：记录联系过、收藏、排除、反馈过的导师。
    - [x] 实现 Semantic Memory：抽象长期研究兴趣和申请策略。
    - [x] 实现 Procedural Memory：记录申请流程、材料准备、沟通和时间安排偏好。
-   - [ ] 实现 Memory Retrieval：回答时检索相关历史记忆。
+   - [x] 实现 Memory Retrieval：回答时检索相关历史记忆。
 5. **研究级 RAG 继续增强**
    - [ ] 接入 BGE-M3 / bge-large-zh embedding。
    - [x] 接入 OpenAI-compatible embedding API。
@@ -387,7 +387,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 6. **评估系统完善**
    - [x] 增加 Faithfulness 评估。
    - [x] 保存历史评估结果。
-   - [ ] 对比不同 embedding、reranker 和 chunking 配置。
+   - [x] 对比不同 embedding、reranker 和 chunking 配置。
 7. **Browser Agent 深度增强**
    - [ ] 支持导师列表页分页识别。
    - [ ] 支持更深链路导航：高校主页 → 学院主页 → 师资列表 → 导师主页 → 论文页。

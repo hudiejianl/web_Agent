@@ -221,6 +221,12 @@ def test_rag_evaluation_endpoint():
     assert run_response.status_code == 200
     assert run_response.json()["evaluation_id"] == runs[0]["evaluation_id"]
 
+    configurations_response = client.get("/api/eval/rag/configurations")
+    assert configurations_response.status_code == 200
+    configurations_payload = configurations_response.json()
+    assert configurations_payload["configurations"]
+    assert all(item["config"] for item in configurations_payload["configurations"])
+
 
 def test_api_errors_have_consistent_shape():
     client = TestClient(app)
