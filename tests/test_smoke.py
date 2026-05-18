@@ -92,6 +92,11 @@ def test_chat_returns_tutor_recommendations():
     assert payload["retrieval_evidence"]
     assert any("**" in item["snippet"] for item in payload["retrieval_evidence"])
     assert payload["plan"]["steps"]
+    step_statuses = {step["id"]: step["status"] for step in payload["plan"]["steps"]}
+    assert step_statuses["check_recent_papers"] in {"completed", "skipped"}
+    assert step_statuses["analyze_research_fit"] in {"completed", "skipped"}
+    assert step_statuses["check_admission_status"] in {"completed", "skipped"}
+    assert step_statuses["score_candidates"] == "completed"
     assert payload["trace"]
     assert any(item["agent"] == "Planner Agent" for item in payload["trace"])
     assert payload["agent_handoffs"]
@@ -254,6 +259,26 @@ def test_context_compressor_builds_structured_summary():
     assert "contacted:张三" in summary
     assert "第一轮对话" not in summary
     assert "第三轮对话" in summary
+
+
+def test_planner_decomposes_research_workflow():
+    from app.agents.planner_agent import PlannerAgent
+
+    plan = PlannerAgent().plan("帮我找武汉地区做多模态方向、近三年发过顶会、并且有企业合作的导师")
+    step_ids = [step.id for step in plan.steps]
+
+    assert [
+        "retrieve_tutors",
+        "check_recent_papers",
+        "analyze_research_fit",
+        "check_admission_status",
+        "score_candidates",
+        "generate_advice",
+    ] == step_ids[-6:]
+    assert "武汉" in plan.constraints
+    assert "近三年" in plan.constraints
+    assert "企业合作" in plan.constraints
+    assert plan.steps[-1].depends_on == ["score_candidates"]
 
 
 def test_chat_replans_with_previous_constraints():

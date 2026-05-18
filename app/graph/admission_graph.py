@@ -178,9 +178,11 @@ class AdmissionGraph:
                 "tutors": [tutor.name for tutor in state["tutors"]],
                 "evidence_count": len(state["retrieval_evidence"]),
             }
-        research_step = self._mark_step(state, "Research Agent", "completed" if state["tutors"] else "skipped")
-        if research_step:
-            research_step.outputs = {"analyzed_count": len(state["tutors"])}
+        research_status = "completed" if state["tutors"] else "skipped"
+        for step_id in ["check_recent_papers", "analyze_research_fit", "check_admission_status"]:
+            research_step = self._mark_step_by_id(state, step_id, research_status)
+            if research_step:
+                research_step.outputs = self._research_step_outputs(step_id, state)
         self._trace(
             state,
             "RAG Retriever",
@@ -250,7 +252,13 @@ class AdmissionGraph:
                 f"通过 {llm_result.provider} 模型 {llm_result.model} 生成个性化推荐",
                 {"provider": llm_result.provider, "model": llm_result.model},
             )
-        advice_step = self._mark_step(state, "Advisor Agent", "completed")
+        score_step = self._mark_step_by_id(state, "score_candidates", "completed")
+        if score_step:
+            score_step.outputs = {
+                "scored_count": len(state.get("tutors", [])),
+                "top_candidates": [tutor.name for tutor in state.get("tutors", [])[:3]],
+            }
+        advice_step = self._mark_step_by_id(state, "generate_advice", "completed")
         if advice_step:
             advice_step.outputs = {"answer_length": len(state["answer"]), "used_llm": not llm_result.used_fallback}
         self._trace(
@@ -306,6 +314,26 @@ class AdmissionGraph:
             f"向 {target_agent} 交接 {payload_type}：{summary}",
             {"target_agent": target_agent, "payload_type": payload_type},
         )
+
+    def _research_step_outputs(self, step_id: str, state: AdmissionState) -> dict:
+        tutors = state.get("tutors", [])
+        evidence = state.get("retrieval_evidence", [])
+        if step_id == "check_recent_papers":
+            return {
+                "tutors_with_papers": sum(1 for tutor in tutors if tutor.papers),
+                "paper_evidence_count": sum(1 for item in evidence if item.field == "papers"),
+            }
+        if step_id == "analyze_research_fit":
+            return {
+                "candidate_count": len(tutors),
+                "matched_fields": list(dict.fromkeys(item.field for item in evidence if item.field in {"research_areas", "admission_directions", "summary"})),
+            }
+        if step_id == "check_admission_status":
+            return {
+                "admission_evidence_count": sum(1 for item in evidence if item.field in {"admission_directions", "requirements"}),
+                "needs_manual_confirmation": True,
+            }
+        return {}
 
     def _mark_step(self, state: AdmissionState, agent: str, status: str):
         plan = state.get("plan")
