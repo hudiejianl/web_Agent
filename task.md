@@ -394,7 +394,8 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 增加页面质量评分和候选主页置信度。
 8. **部署与展示**
    - [x] 增加 Dockerfile 和启动脚本。
-   - [ ] 增加 React / Next.js 前端工作流 UI。
+   - [x] 增强内置前端工作流 UI：展示 Plan / Trace / Evidence / Memory、Browser Research 深链路候选和导航参数。
+   - [ ] 可选增加独立 React / Next.js 前端工程。
    - [x] 可选接入 LangSmith 或 OpenTelemetry。
 
 ---

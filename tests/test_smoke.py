@@ -68,6 +68,16 @@ def test_health():
     assert response.json()["status"] == "ok"
 
 
+def test_index_serves_workflow_ui():
+    client = TestClient(app)
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "工作流可视化" in response.text
+    assert "navigationDepth" in response.text
+    assert "escapeHtml" in response.text
+
+
 def test_chat_returns_tutor_recommendations():
     client = TestClient(app)
     response = client.post(

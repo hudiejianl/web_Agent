@@ -5,58 +5,90 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>升学智能体 Research Agent</title>
   <style>
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f7fb; color: #172033; }
-    header { padding: 28px 40px; background: #1d4ed8; color: white; }
-    main { max-width: 1200px; margin: 24px auto; padding: 0 20px; display: grid; grid-template-columns: 1.3fr .9fr; gap: 20px; }
-    section { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(15, 23, 42, .08); }
-    textarea, input { width: 100%; box-sizing: border-box; border: 1px solid #d7deea; border-radius: 12px; padding: 12px; font-size: 15px; }
-    button { border: 0; border-radius: 12px; padding: 11px 16px; background: #2563eb; color: white; cursor: pointer; font-weight: 700; }
-    button.secondary { background: #0f766e; }
-    pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius: 12px; padding: 14px; min-height: 220px; }
-    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin: 10px 0; }
-    .trace { border-left: 4px solid #2563eb; padding: 10px 12px; margin: 10px 0; background: #f8fafc; border-radius: 10px; }
-    .step { display: grid; grid-template-columns: 86px 1fr; gap: 8px; border-bottom: 1px solid #eef2f7; padding: 8px 0; }
+    :root { color-scheme: light; --blue: #2563eb; --green: #0f766e; --bg: #f5f7fb; --text: #172033; --muted: #64748b; --line: #e5e7eb; --panel: #ffffff; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+    header { padding: 28px 40px; background: linear-gradient(135deg, #1d4ed8, #0f766e); color: white; }
+    header h1 { margin: 0 0 8px; }
+    main { max-width: 1320px; margin: 24px auto; padding: 0 20px; display: grid; grid-template-columns: 1.2fr .95fr; gap: 20px; }
+    section { background: var(--panel); border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(15, 23, 42, .08); }
+    textarea, input, select { width: 100%; box-sizing: border-box; border: 1px solid #d7deea; border-radius: 12px; padding: 12px; font-size: 15px; background: white; }
+    label { display: block; margin: 8px 0 6px; font-weight: 700; }
+    button { border: 0; border-radius: 12px; padding: 11px 16px; background: var(--blue); color: white; cursor: pointer; font-weight: 700; }
+    button.secondary { background: var(--green); }
+    button.ghost { background: #e2e8f0; color: #0f172a; }
+    pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius: 12px; padding: 14px; min-height: 160px; overflow-x: auto; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 10px 0; background: #fff; }
+    .trace { border-left: 4px solid var(--blue); padding: 10px 12px; margin: 10px 0; background: #f8fafc; border-radius: 10px; }
+    .step { display: grid; grid-template-columns: 96px 1fr; gap: 10px; border-bottom: 1px solid #eef2f7; padding: 10px 0; }
     .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; background: #dbeafe; color: #1e40af; font-size: 12px; font-weight: 700; }
-    .muted { color: #64748b; font-size: 14px; }
+    .badge.completed, .badge.ingested { background: #dcfce7; color: #166534; }
+    .badge.failed { background: #fee2e2; color: #991b1b; }
+    .badge.running, .badge.browsed { background: #fef3c7; color: #92400e; }
+    .muted { color: var(--muted); font-size: 14px; }
+    .workflow { margin: 12px 0; padding: 12px; border: 1px solid #dbeafe; border-radius: 14px; background: #eff6ff; }
+    .workflow-row { display: grid; grid-template-columns: 120px 1fr 90px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #bfdbfe; }
+    .workflow-row:last-child { border-bottom: 0; }
+    .bar { height: 8px; border-radius: 999px; background: #dbeafe; overflow: hidden; }
+    .bar span { display: block; height: 100%; background: var(--blue); }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 10px; }
+    .tab { background: #e2e8f0; color: #0f172a; }
+    .tab.active { background: var(--blue); color: white; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .candidate { border-left: 4px solid var(--green); }
+    .danger { color: #b91c1c; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } .grid, .workflow-row { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <header>
     <h1>升学智能体系统（Research Agent）</h1>
-    <p>LangGraph 多智能体编排 · RAG 导师推荐 · 网页采集 · 长期记忆 · 上下文压缩</p>
+    <p>LangGraph 多智能体编排 · RAG 导师推荐 · Browser Research · 长期记忆 · 工作流可视化</p>
   </header>
   <main>
     <section>
       <h2>多轮升学咨询</h2>
       <p class="muted">示例：我想申请 AI 和 RAG 方向硕士，偏好江浙沪，帮我推荐导师。</p>
       <textarea id="message" rows="5">我想申请 AI 和 RAG 方向硕士，偏好江浙沪，帮我推荐导师。</textarea>
-      <p><button onclick="sendChat()">发送咨询</button></p>
+      <p><button type="button" onclick="sendChat()">发送咨询</button> <button type="button" class="ghost" onclick="loadMemory()">刷新记忆</button></p>
       <pre id="answer">等待输入...</pre>
-      <h3>检索证据</h3>
-      <div id="retrievalEvidence" class="muted">暂无检索证据</div>
+      <div id="workflowSummary" class="workflow">暂无工作流摘要</div>
+      <div class="tabs">
+        <button type="button" class="tab active" onclick="showPanel('planPanel', this)">任务计划</button>
+        <button type="button" class="tab" onclick="showPanel('tracePanel', this)">Agent Trace</button>
+        <button type="button" class="tab" onclick="showPanel('evidencePanel', this)">检索证据</button>
+        <button type="button" class="tab" onclick="showPanel('memoryPanel', this)">长期记忆</button>
+      </div>
+      <div id="planPanel" class="panel active"><div id="plan" class="muted">暂无任务计划</div></div>
+      <div id="tracePanel" class="panel"><div id="trace" class="muted">暂无执行轨迹</div></div>
+      <div id="evidencePanel" class="panel"><div id="retrievalEvidence" class="muted">暂无检索证据</div></div>
+      <div id="memoryPanel" class="panel"><pre id="memoryView">暂无长期记忆</pre></div>
       <h3>RAG Evaluation 报告</h3>
-      <p class="muted">对比 baseline、hybrid 和 reranker 三种检索策略的 Recall、Precision 与 Relevance。</p>
-      <p><button onclick="runRagEvaluationReport()">生成评估报告</button></p>
+      <p class="muted">对比 baseline、hybrid 和 reranker 三种检索策略的 Recall、Precision、Relevance 与 Faithfulness。</p>
+      <p><button type="button" onclick="runRagEvaluationReport()">生成评估报告</button></p>
       <pre id="ragEvalReport">暂无评估报告</pre>
-      <h3>Agent Trace</h3>
-      <div id="trace" class="muted">暂无执行轨迹</div>
     </section>
     <section>
       <h2>导师主页采集</h2>
       <p class="muted">输入公开导师主页 URL，系统会抓取正文并结构化入库。</p>
       <input id="url" placeholder="https://..." />
-      <p><button class="secondary" onclick="ingestUrl()">采集并入库</button></p>
-      <h3>Browser Agent 动态浏览</h3>
-      <p class="muted">使用 Playwright 打开网页、等待动态加载、读取 DOM；如果浏览器未安装会自动回退静态抓取。</p>
-      <p><button onclick="browseUrl()">动态浏览并提取 DOM</button></p>
+      <p><button type="button" class="secondary" onclick="ingestUrl()">采集并入库</button> <button type="button" onclick="browseUrl()">动态浏览并提取 DOM</button></p>
       <pre id="browserResult">暂无浏览结果</pre>
+
       <h3>Autonomous Browser Research</h3>
-      <p class="muted">输入研究目标，系统会自动搜索候选导师主页、浏览页面、结构化并入库。</p>
+      <p class="muted">自动改写 Query、搜索候选入口、按深度导航到学院/师资/导师/论文页，并结构化入库。</p>
       <textarea id="researchQuery" rows="3">武汉 多模态 人工智能 导师 个人主页</textarea>
-      <p><button onclick="runBrowserResearch()">自动搜索并入库</button></p>
+      <div class="grid">
+        <div><label for="navigationDepth">导航深度</label><input id="navigationDepth" type="number" min="0" max="5" value="3" /></div>
+        <div><label for="maxNavigationPages">最多导航页</label><input id="maxNavigationPages" type="number" min="1" max="20" value="8" /></div>
+        <div><label for="maxCandidates">候选链接数</label><input id="maxCandidates" type="number" min="1" max="20" value="8" /></div>
+        <div><label for="maxIngest">入库导师数</label><input id="maxIngest" type="number" min="1" max="5" value="3" /></div>
+      </div>
+      <p><button type="button" onclick="runBrowserResearch()">自动搜索并入库</button></p>
       <pre id="researchResult">暂无自动研究结果</pre>
-      <h3>任务计划</h3>
-      <div id="plan" class="muted">暂无任务计划</div>
+      <h3>候选链路</h3>
+      <div id="candidates" class="muted">暂无候选链路</div>
       <h3>候选导师</h3>
       <div id="tutors"></div>
     </section>
@@ -64,6 +96,22 @@
   <script>
     const sessionId = localStorage.getItem('sessionId') || crypto.randomUUID();
     localStorage.setItem('sessionId', sessionId);
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[char]));
+    }
+
+    function badge(status) {
+      const safe = escapeHtml(status || 'pending');
+      return `<span class="badge ${safe}">${safe}</span>`;
+    }
+
+    function showPanel(id, button) {
+      document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      button.classList.add('active');
+    }
 
     async function sendChat() {
       const answer = document.getElementById('answer');
@@ -73,11 +121,14 @@
         body: JSON.stringify({session_id: sessionId, message: document.getElementById('message').value})
       });
       const data = await res.json();
-      answer.textContent = data.answer + '\n\nTrace ID：' + (data.trace_id || '未保存') + '\n\n长期记忆：' + JSON.stringify(data.memory.profile, null, 2);
+      if (!res.ok) { answer.textContent = JSON.stringify(data, null, 2); return; }
+      answer.textContent = `${data.answer}\n\nTrace ID：${data.trace_id || '未保存'}`;
+      renderWorkflow(data.plan, data.trace || []);
       await renderPlan(data.plan);
       renderEvidence(data.retrieval_evidence || []);
       renderTrace(data.trace || []);
       renderTutors(data.tutors || []);
+      renderMemory(data.memory);
     }
 
     async function ingestUrl() {
@@ -121,10 +172,18 @@
 
     async function runBrowserResearch() {
       const output = document.getElementById('researchResult');
-      output.textContent = 'Autonomous Browser Research Agent 正在搜索、筛选、浏览并入库...';
+      output.textContent = 'Autonomous Browser Research Agent 正在搜索、筛选、深度导航并入库...';
       const res = await fetch('/api/browser/research', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({query: document.getElementById('researchQuery').value, max_search_pages: 1, max_candidates: 8, max_ingest: 3, navigation_depth: 1, max_navigation_pages: 6, use_playwright: true})
+        body: JSON.stringify({
+          query: document.getElementById('researchQuery').value,
+          max_search_pages: 1,
+          max_candidates: Number(document.getElementById('maxCandidates').value),
+          max_ingest: Number(document.getElementById('maxIngest').value),
+          navigation_depth: Number(document.getElementById('navigationDepth').value),
+          max_navigation_pages: Number(document.getElementById('maxNavigationPages').value),
+          use_playwright: true
+        })
       });
       const data = await res.json();
       if (!res.ok) { output.textContent = JSON.stringify(data, null, 2); return; }
@@ -133,41 +192,55 @@
         trace_id: data.trace_id,
         rewritten_queries: data.rewritten_queries,
         search_urls: data.search_urls,
-        candidates: (data.candidates || []).map(item => ({text: item.text, url: item.url, score: item.score, reason: item.reason, status: item.status, error: item.error})),
-        ingested_tutors: (data.tutors || []).map(t => ({name: t.name, institution: t.institution, homepage: t.homepage, areas: t.research_areas})),
-        trace: (data.trace || []).map(item => `[${item.agent}] ${item.action}: ${item.status} - ${item.detail}`)
+        ingested_tutors: (data.tutors || []).map(t => ({name: t.name, institution: t.institution, homepage: t.homepage, areas: t.research_areas}))
       }, null, 2);
+      renderCandidates(data.candidates || []);
       renderTrace(data.trace || []);
       renderTutors(data.tutors || []);
+      renderWorkflow(null, data.trace || []);
     }
 
     async function renderPlan(plan) {
       const steps = (plan && plan.steps) || [];
       const latest = await fetch(`/api/plans/session/${sessionId}?limit=1`).then(res => res.ok ? res.json() : {runs: []}).catch(() => ({runs: []}));
       const latestPlan = (latest.runs || [])[0];
-      document.getElementById('plan').innerHTML = `${latestPlan ? `<p class="muted">Plan ID：${latestPlan.plan_id} · Trace ID：${latestPlan.trace_id}</p>` : ''}` + (steps.map(step => `
+      document.getElementById('plan').innerHTML = `${latestPlan ? `<p class="muted">Plan ID：${escapeHtml(latestPlan.plan_id)} · Trace ID：${escapeHtml(latestPlan.trace_id)}</p>` : ''}` + (steps.map(step => `
         <div class="step">
-          <span class="badge">${step.status}</span>
+          ${badge(step.status)}
           <div>
-            <strong>${step.name}</strong><br />
-            <span class="muted">${step.agent} · ID: ${step.id}</span><br />
-            <span class="muted">依赖：${(step.depends_on || []).join('、') || '无'}</span><br />
-            <span class="muted">原因：${step.rationale}</span><br />
-            <span class="muted">预期输出：${step.expected_output || '未定义'}</span><br />
-            <span class="muted">实际输出：${JSON.stringify(step.outputs || {})}</span>
-            ${step.error ? `<br /><span style="color:#b91c1c">错误：${step.error}</span>` : ''}
+            <strong>${escapeHtml(step.name)}</strong><br />
+            <span class="muted">${escapeHtml(step.agent)} · ID: ${escapeHtml(step.id)}</span><br />
+            <span class="muted">依赖：${escapeHtml((step.depends_on || []).join('、') || '无')}</span><br />
+            <span class="muted">原因：${escapeHtml(step.rationale)}</span><br />
+            <span class="muted">预期输出：${escapeHtml(step.expected_output || '未定义')}</span><br />
+            <span class="muted">实际输出：${escapeHtml(JSON.stringify(step.outputs || {}))}</span>
+            ${step.error ? `<br /><span class="danger">错误：${escapeHtml(step.error)}</span>` : ''}
           </div>
         </div>
       `).join('') || '<p class="muted">暂无任务计划</p>');
     }
 
+    function renderWorkflow(plan, trace) {
+      const steps = plan?.steps || [];
+      const completed = steps.filter(step => step.status === 'completed').length;
+      const failed = trace.filter(item => item.status === 'failed').length;
+      const traceCount = trace.length;
+      const progress = steps.length ? Math.round((completed / steps.length) * 100) : (traceCount ? 100 : 0);
+      document.getElementById('workflowSummary').innerHTML = `
+        <div class="workflow-row"><strong>任务进度</strong><div class="bar"><span style="width:${progress}%"></span></div><span>${progress}%</span></div>
+        <div class="workflow-row"><strong>计划步骤</strong><span>${steps.length ? `${completed}/${steps.length} 已完成` : '无计划步骤'}</span><span>${steps.length}</span></div>
+        <div class="workflow-row"><strong>Trace 节点</strong><span>记录智能体执行链路</span><span>${traceCount}</span></div>
+        <div class="workflow-row"><strong>失败节点</strong><span>${failed ? '存在失败节点，请查看 Agent Trace' : '未发现失败节点'}</span><span>${failed}</span></div>
+      `;
+    }
+
     function renderEvidence(items) {
       document.getElementById('retrievalEvidence').innerHTML = items.map(item => `
         <div class="trace">
-          <strong>${item.tutor_name} · ${item.field}</strong>
-          <span class="badge">${item.score.toFixed ? item.score.toFixed(1) : item.score}</span><br />
-          <span>${item.snippet}</span><br />
-          <span class="muted">匹配词：${(item.matched_terms || []).join('、') || '无'}${item.source_url ? ' · 来源：' + item.source_url : ''}</span>
+          <strong>${escapeHtml(item.tutor_name)} · ${escapeHtml(item.field)}</strong>
+          <span class="badge">${escapeHtml(item.score?.toFixed ? item.score.toFixed(1) : item.score)}</span><br />
+          <span>${escapeHtml(item.snippet)}</span><br />
+          <span class="muted">匹配词：${escapeHtml((item.matched_terms || []).join('、') || '无')}${item.source_url ? ' · 来源：' + escapeHtml(item.source_url) : ''}</span>
         </div>
       `).join('') || '<p class="muted">暂无检索证据</p>';
     }
@@ -175,23 +248,45 @@
     function renderTrace(items) {
       document.getElementById('trace').innerHTML = items.map(item => `
         <div class="trace">
-          <strong>[${item.agent}] ${item.action}</strong>
-          <span class="badge">${item.status}</span><br />
-          <span class="muted">${new Date(item.timestamp).toLocaleString()}</span><br />
-          <span>${item.detail}</span>
+          <strong>[${escapeHtml(item.agent)}] ${escapeHtml(item.action)}</strong>
+          ${badge(item.status)}<br />
+          <span class="muted">${escapeHtml(new Date(item.timestamp).toLocaleString())}</span><br />
+          <span>${escapeHtml(item.detail)}</span>
         </div>
       `).join('') || '<p class="muted">暂无执行轨迹</p>';
+    }
+
+    function renderCandidates(items) {
+      document.getElementById('candidates').innerHTML = items.map(item => `
+        <div class="card candidate">
+          <strong>${escapeHtml(item.text || item.url)}</strong> ${badge(item.status)}<br />
+          <span class="muted">类型：${escapeHtml(item.link_type || 'candidate')} · 深度：${escapeHtml(item.depth ?? 0)} · 置信度：${escapeHtml(item.confidence ?? 0)} · 分数：${escapeHtml(item.score ?? 0)}</span><br />
+          <span class="muted">原因：${escapeHtml(item.reason || '无')}</span><br />
+          <span>${escapeHtml(item.url)}</span>
+          ${item.error ? `<br /><span class="danger">错误：${escapeHtml(item.error)}</span>` : ''}
+        </div>
+      `).join('') || '<p class="muted">暂无候选链路</p>';
     }
 
     function renderTutors(items) {
       document.getElementById('tutors').innerHTML = items.map(t => `
         <div class="card">
-          <strong>${t.name}</strong><br />
-          <span>${t.institution || ''} ${t.department || ''}</span><br />
-          <span class="muted">方向：${(t.research_areas || []).join('、')}</span>
-          <p>${t.summary || ''}</p>
+          <strong>${escapeHtml(t.name)}</strong><br />
+          <span>${escapeHtml(t.institution || '')} ${escapeHtml(t.department || '')}</span><br />
+          <span class="muted">方向：${escapeHtml((t.research_areas || []).join('、'))}</span>
+          <p>${escapeHtml(t.summary || '')}</p>
         </div>
       `).join('') || '<p class="muted">暂无导师结果</p>';
+    }
+
+    function renderMemory(memory) {
+      document.getElementById('memoryView').textContent = JSON.stringify(memory || {}, null, 2);
+    }
+
+    async function loadMemory() {
+      const res = await fetch(`/api/memory/${sessionId}`);
+      const data = await res.json();
+      renderMemory(data);
     }
   </script>
 </body>
