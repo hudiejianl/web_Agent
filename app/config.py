@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     embedding_timeout_seconds: int = 30
     rag_chunk_size: int = 600
     rag_chunk_overlap: int = 120
+    reranker_provider: str = "local"
+    reranker_model: str = ""
+    reranker_api_key: str = ""
+    reranker_base_url: str = ""
+    reranker_timeout_seconds: int = 30
     llm_provider: str = "none"
     llm_model: str = ""
     anthropic_api_key: str = ""

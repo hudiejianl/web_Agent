@@ -56,7 +56,7 @@ class RAGEvaluator:
                 retrieval_strategy="reranker",
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_overlap,
-                reranker="local",
+                reranker=settings.reranker_provider,
             )
             key = (config.embedding_provider, config.embedding_model, config.retrieval_strategy, config.chunk_size, config.chunk_overlap, config.reranker)
             if key not in seen:
@@ -97,7 +97,7 @@ class RAGEvaluator:
             retrieval_strategy=strategy,
             chunk_size=settings.rag_chunk_size,
             chunk_overlap=settings.rag_chunk_overlap,
-            reranker="local" if strategy == "reranker" else "none",
+            reranker=settings.reranker_provider if strategy == "reranker" else "none",
         )
 
     def _relevance(self, case: RAGEvaluationCase, profiles: list[TutorProfile]) -> float:

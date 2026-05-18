@@ -126,6 +126,66 @@ def test_embedding_function_falls_back_without_api_key(monkeypatch):
     assert isinstance(get_embedding_function(), HashingEmbeddingFunction)
 
 
+def test_api_reranker_orders_profiles_by_remote_scores(monkeypatch):
+    generic = TutorProfile(id="generic", name="王五", institution="示例大学", research_areas=["机器学习"], summary="机器学习")
+    aligned = TutorProfile(id="aligned", name="赵六", institution="示例大学", research_areas=["多模态"], summary="多模态人工智能")
+    calls = []
+
+    class FakeSettings:
+        reranker_provider = "openai-compatible"
+        reranker_api_key = "secret"
+        reranker_base_url = "https://api.example.com/v1"
+        openai_base_url = "https://api.openai.com/v1"
+        reranker_model = "bge-reranker-demo"
+        reranker_timeout_seconds = 9
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"results": [{"index": 1, "relevance_score": 0.9}, {"index": 0, "relevance_score": 0.1}]}
+
+    def fake_post(url, headers, json, timeout):
+        calls.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
+        return FakeResponse()
+
+    monkeypatch.setattr("app.rag.reranker.get_settings", lambda: FakeSettings())
+    monkeypatch.setattr("app.rag.reranker.requests.post", fake_post)
+
+    results = TutorReranker().rerank("多模态", [generic, aligned], limit=2)
+
+    assert [profile.id for profile in results] == ["aligned", "generic"]
+    assert calls[0]["url"] == "https://api.example.com/v1/rerank"
+    assert calls[0]["headers"]["Authorization"] == "Bearer secret"
+    assert calls[0]["json"]["model"] == "bge-reranker-demo"
+    assert calls[0]["json"]["top_n"] == 2
+    assert calls[0]["timeout"] == 9
+
+
+def test_api_reranker_falls_back_to_local_on_failure(monkeypatch):
+    generic = TutorProfile(id="generic", name="王五", institution="示例大学", research_areas=["机器学习"], summary="机器学习")
+    aligned = TutorProfile(id="aligned", name="赵六", institution="示例大学", research_areas=["多模态"], summary="多模态人工智能")
+
+    class FakeSettings:
+        reranker_provider = "openai-compatible"
+        reranker_api_key = "secret"
+        reranker_base_url = "https://api.example.com/v1"
+        openai_base_url = "https://api.openai.com/v1"
+        reranker_model = "bge-reranker-demo"
+        reranker_timeout_seconds = 9
+
+    def fake_post(*args, **kwargs):
+        raise RuntimeError("temporary reranker failure")
+
+    monkeypatch.setattr("app.rag.reranker.get_settings", lambda: FakeSettings())
+    monkeypatch.setattr("app.rag.reranker.requests.post", fake_post)
+
+    results = TutorReranker().rerank("多模态", [generic, aligned], limit=2)
+
+    assert [profile.id for profile in results] == ["aligned", "generic"]
+
+
 def test_reranker_prioritizes_query_aligned_profiles():
     generic = TutorProfile(id="generic", name="王五", institution="示例大学", research_areas=["机器学习"], summary="机器学习")
     aligned = TutorProfile(

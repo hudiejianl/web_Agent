@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import re
 
+import requests
+
+from app.config import get_settings
 from app.models.schemas import TutorProfile
 from app.rag.bm25 import BM25Retriever
 
@@ -14,6 +17,36 @@ class TutorReranker:
     def rerank(self, query: str, profiles: list[TutorProfile], limit: int | None = None) -> list[TutorProfile]:
         if not profiles:
             return []
+        settings = get_settings()
+        if settings.reranker_provider == "openai-compatible" and settings.reranker_api_key:
+            try:
+                return self._api_rerank(query, profiles, limit, settings)
+            except Exception:
+                pass
+        return self._local_rerank(query, profiles, limit)
+
+    def _api_rerank(self, query: str, profiles: list[TutorProfile], limit: int | None, settings: object) -> list[TutorProfile]:
+        base_url = (settings.reranker_base_url or settings.openai_base_url).rstrip("/")
+        documents = [profile.document_text() for profile in profiles]
+        response = requests.post(
+            f"{base_url}/rerank",
+            headers={"Authorization": f"Bearer {settings.reranker_api_key}", "Content-Type": "application/json"},
+            json={"model": settings.reranker_model, "query": query, "documents": documents, "top_n": limit or len(profiles)},
+            timeout=settings.reranker_timeout_seconds,
+        )
+        response.raise_for_status()
+        data = response.json().get("results", [])
+        ranked = []
+        seen = set()
+        for item in sorted(data, key=lambda value: value.get("relevance_score", value.get("score", 0.0)), reverse=True):
+            index = item.get("index")
+            if isinstance(index, int) and 0 <= index < len(profiles) and index not in seen:
+                ranked.append(profiles[index])
+                seen.add(index)
+        ranked.extend(profile for index, profile in enumerate(profiles) if index not in seen)
+        return ranked[:limit] if limit else ranked
+
+    def _local_rerank(self, query: str, profiles: list[TutorProfile], limit: int | None = None) -> list[TutorProfile]:
         bm25_scores = {profile.id: score for profile, score in BM25Retriever(profiles).search(query, limit=len(profiles)) if profile.id}
         max_bm25 = max(bm25_scores.values(), default=0.0) or 1.0
         scored = []

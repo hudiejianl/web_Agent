@@ -304,7 +304,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 支持 BM25 关键词检索
 - [x] 实现 Hybrid Retrieval：BM25 + Dense Retrieval
 - [x] 接入本地轻量 reranker 第一版
-- [ ] 接入模型 reranker：bge-reranker / jina-reranker
+- [x] 接入模型 reranker：bge-reranker / jina-reranker
 - [x] 支持 chunking 策略
 - [x] 支持论文、主页、招生信息分字段检索证据
 - [x] 支持引用证据高亮
@@ -382,7 +382,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 5. **研究级 RAG 继续增强**
    - [ ] 接入 BGE-M3 / bge-large-zh embedding。
    - [x] 接入 OpenAI-compatible embedding API。
-   - [ ] 接入 bge-reranker / jina-reranker。
+   - [x] 接入 bge-reranker / jina-reranker。
    - [x] 实现 chunking 策略，后续继续评估不同 chunk size。
 6. **评估系统完善**
    - [x] 增加 Faithfulness 评估。
