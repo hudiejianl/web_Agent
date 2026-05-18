@@ -15,6 +15,7 @@ from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
 from app.logging_config import configure_logging
 from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, TraceRunResponse
+from app.observability import configure_observability, request_span
 from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
 from app.services.browser_research import BrowserResearchService
@@ -25,6 +26,7 @@ from app.storage.repositories import MemoryRepository, PlanRepository, RAGEvalua
 
 configure_logging()
 settings = get_settings()
+configure_observability()
 logger = logging.getLogger("app.requests")
 
 
@@ -60,16 +62,18 @@ async def request_context(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID") or str(uuid4())
     request.state.request_id = request_id
     start = time.perf_counter()
-    try:
-        response = await call_next(request)
-    except Exception:
+    attributes = {"http.method": request.method, "http.route": request.url.path, "request.id": request_id}
+    with request_span(f"{request.method} {request.url.path}", attributes):
+        try:
+            response = await call_next(request)
+        except Exception:
+            duration_ms = (time.perf_counter() - start) * 1000
+            logger.exception("request failed request_id=%s method=%s path=%s duration_ms=%.2f", request_id, request.method, request.url.path, duration_ms)
+            raise
         duration_ms = (time.perf_counter() - start) * 1000
-        logger.exception("request failed request_id=%s method=%s path=%s duration_ms=%.2f", request_id, request.method, request.url.path, duration_ms)
-        raise
-    duration_ms = (time.perf_counter() - start) * 1000
-    response.headers["X-Request-ID"] = request_id
-    logger.info("request completed request_id=%s method=%s path=%s status=%s duration_ms=%.2f", request_id, request.method, request.url.path, response.status_code, duration_ms)
-    return response
+        response.headers["X-Request-ID"] = request_id
+        logger.info("request completed request_id=%s method=%s path=%s status=%s duration_ms=%.2f", request_id, request.method, request.url.path, response.status_code, duration_ms)
+        return response
 
 
 def _request_id(request: Request) -> str:

@@ -10,6 +10,42 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
+def test_observability_is_optional(monkeypatch):
+    from app import observability
+
+    class DisabledSettings:
+        enable_opentelemetry = False
+        otel_service_name = "test-service"
+        otel_exporter_otlp_endpoint = ""
+
+    monkeypatch.setattr("app.observability.get_settings", lambda: DisabledSettings())
+    observability.configure_observability()
+
+    with observability.request_span("test"):
+        assert True
+
+
+def test_observability_handles_missing_dependencies(monkeypatch):
+    from app import observability
+
+    class EnabledSettings:
+        enable_opentelemetry = True
+        otel_service_name = "test-service"
+        otel_exporter_otlp_endpoint = ""
+
+    original_import = __import__
+
+    def fake_import(name, *args, **kwargs):
+        if name.startswith("opentelemetry"):
+            raise ImportError("missing")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("app.observability.get_settings", lambda: EnabledSettings())
+    monkeypatch.setattr("builtins.__import__", fake_import)
+
+    observability.configure_observability()
+
+
 def test_run_script_invokes_uvicorn(monkeypatch):
     from scripts import run
 

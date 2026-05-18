@@ -346,7 +346,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 目标：提升项目工程深度和可展示性。
 
 - [x] 持久化 Agent Trace
-- [ ] 接入 LangSmith 或 OpenTelemetry
+- [x] 接入 LangSmith 或 OpenTelemetry
 - [x] 增加请求 ID / session trace ID
 - [x] 增加日志系统
 - [x] 增加错误处理与失败恢复
@@ -395,7 +395,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 8. **部署与展示**
    - [x] 增加 Dockerfile 和启动脚本。
    - [ ] 增加 React / Next.js 前端工作流 UI。
-   - [ ] 可选接入 LangSmith 或 OpenTelemetry。
+   - [x] 可选接入 LangSmith 或 OpenTelemetry。
 
 ---
 

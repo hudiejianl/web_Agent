@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     request_timeout_seconds: int = 15
     max_context_messages: int = 8
     summary_trigger_messages: int = 10
+    enable_opentelemetry: bool = False
+    otel_service_name: str = "admission-research-agent"
+    otel_exporter_otlp_endpoint: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
