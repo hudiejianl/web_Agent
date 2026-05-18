@@ -391,7 +391,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 7. **Browser Agent 深度增强**
    - [ ] 支持导师列表页分页识别。
    - [ ] 支持更深链路导航：高校主页 → 学院主页 → 师资列表 → 导师主页 → 论文页。
-   - [ ] 增加页面质量评分和候选主页置信度。
+   - [x] 增加页面质量评分和候选主页置信度。
 8. **部署与展示**
    - [x] 增加 Dockerfile 和启动脚本。
    - [ ] 增加 React / Next.js 前端工作流 UI。

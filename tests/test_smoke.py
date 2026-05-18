@@ -385,6 +385,19 @@ def test_browser_research_clamps_configured_limits(monkeypatch):
     assert clamped.max_navigation_pages == 3
 
 
+def test_browser_research_scores_page_quality_and_confidence():
+    from app.models.schemas import CandidateLink
+    from app.services.browser_research import BrowserResearchService
+
+    service = BrowserResearchService()
+    high_quality = service._page_quality({"text": "张三 教授 研究方向 人工智能 多模态 招生 论文 email zhangsan@example.edu.cn" * 20, "links": [{"text": "论文", "url": "https://example.com/paper"}]})
+    candidate = CandidateLink(text="张三 教授 个人主页", url="https://cs.example.edu.cn/teacher/zhangsan", score=8.0, page_quality=high_quality)
+    service._score_candidate_confidence(candidate)
+
+    assert high_quality > 0.7
+    assert candidate.confidence > 0.7
+
+
 def test_browser_research_endpoint(monkeypatch):
     from app.agents.browser_agent import BrowserAgent
     from app.services.browser_research import BrowserResearchService
@@ -433,6 +446,8 @@ def test_browser_research_endpoint(monkeypatch):
     assert payload["trace_id"]
     assert payload["rewritten_queries"]
     assert payload["candidates"]
+    assert payload["candidates"][0]["confidence"] > 0
+    assert "page_quality" in payload["candidates"][0]
     assert payload["tutors"]
     assert payload["tutors"][0]["name"] == "张三"
     assert any(item["agent"] == "Query Rewriter Agent" for item in payload["trace"])

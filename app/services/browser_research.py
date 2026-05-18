@@ -96,10 +96,11 @@ class BrowserResearchService:
                 trace.append(self._trace("Browser Agent", "browse_search_page", "failed", f"搜索入口失败：{search_url}", self._error_metadata(exc)))
                 continue
             for candidate in result_filter.filter_links(page.get("links", []), filter_query, search_url):
+                self._score_candidate_confidence(candidate)
                 existing = collected.get(candidate.url)
-                if existing is None or candidate.score > existing.score:
+                if existing is None or candidate.confidence > existing.confidence:
                     collected[candidate.url] = candidate
-        candidates = sorted(collected.values(), key=lambda item: item.score, reverse=True)
+        candidates = sorted(collected.values(), key=lambda item: (item.confidence, item.score), reverse=True)
         limited = candidates[: max(1, min(request.max_candidates, 20))]
         trace.append(self._trace("Search Result Filter", "rank_candidate_links", "completed", f"候选链接过滤完成：{len(limited)} / {len(candidates)}"))
         return limited
@@ -130,10 +131,11 @@ class BrowserResearchService:
                 continue
             for discovered in result_filter.filter_links(page.get("links", []), filter_query, page_candidate.url):
                 discovered.score += max(page_candidate.score * 0.2, 1.0)
+                self._score_candidate_confidence(discovered)
                 if discovered.url not in collected:
                     collected[discovered.url] = discovered
                     discovered_count += 1
-        expanded = sorted(collected.values(), key=lambda item: item.score, reverse=True)[: max(1, min(request.max_candidates, 20))]
+        expanded = sorted(collected.values(), key=lambda item: (item.confidence, item.score), reverse=True)[: max(1, min(request.max_candidates, 20))]
         trace.append(self._trace("Browser Agent", "discover_navigation_links", "completed", f"导航式发现新增 {discovered_count} 个候选链接"))
         return expanded
 
@@ -142,7 +144,9 @@ class BrowserResearchService:
         for candidate in candidates[: max(1, min(request.max_ingest, len(candidates) or 1))]:
             try:
                 page = self.browser.fetch(candidate.url, use_playwright=request.use_playwright, actions=[])
-                trace.append(self._trace("Browser Agent", "browse_candidate_page", "completed", f"已打开候选主页：{candidate.url}"))
+                candidate.page_quality = self._page_quality(page)
+                self._score_candidate_confidence(candidate)
+                trace.append(self._trace("Browser Agent", "browse_candidate_page", "completed", f"已打开候选主页：{candidate.url}", {"page_quality": candidate.page_quality, "confidence": candidate.confidence}))
                 profile = self.researcher.structure_faculty_page(page)
                 profile.homepage = profile.homepage or candidate.url
                 saved = self.ingestion.ingest_profile(profile)
@@ -157,6 +161,26 @@ class BrowserResearchService:
             if candidate.status == "pending":
                 candidate.status = "skipped"
         return tutors
+
+    def _page_quality(self, page: dict) -> float:
+        text = page.get("text", "") or ""
+        links = page.get("links", []) or []
+        score = 0.0
+        if len(text) >= 300:
+            score += 0.25
+        if len(text) >= 1000:
+            score += 0.2
+        if any(keyword in text for keyword in ["研究方向", "招生", "论文", "个人主页", "教授", "导师"]):
+            score += 0.25
+        if any(keyword in text.lower() for keyword in ["email", "@", "publication", "research"]):
+            score += 0.15
+        if links:
+            score += 0.15
+        return round(min(score, 1.0), 4)
+
+    def _score_candidate_confidence(self, candidate: CandidateLink) -> None:
+        normalized_score = min(max(candidate.score / 10.0, 0.0), 1.0)
+        candidate.confidence = round(min(0.65 * normalized_score + 0.35 * candidate.page_quality, 1.0), 4)
 
     def _error_metadata(self, exc: Exception) -> dict[str, str | int | float | bool]:
         metadata: dict[str, str | int | float | bool] = {"error": str(exc)[:180], "error_type": type(exc).__name__}
