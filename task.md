@@ -395,7 +395,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 8. **部署与展示**
    - [x] 增加 Dockerfile 和启动脚本。
    - [x] 增强内置前端工作流 UI：展示 Plan / Trace / Evidence / Memory、Browser Research 深链路候选和导航参数。
-   - [ ] 可选增加独立 React / Next.js 前端工程。
+   - [x] 增加独立 React / Vite 前端工程，可连接 FastAPI API 展示工作流 UI。
    - [x] 可选接入 LangSmith 或 OpenTelemetry。
 
 ---

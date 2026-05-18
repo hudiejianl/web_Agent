@@ -30,11 +30,21 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python -m uvicorn app.main:app --reload
 ```
 
-浏览器打开：
+浏览器打开内置页面：
 
 ```text
 http://127.0.0.1:8000
 ```
+
+也可以运行独立 React / Vite 前端工程：
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+前端开发服务器会代理 `/api` 到 `http://127.0.0.1:8000`，因此需要先启动 FastAPI 后端。
 
 ## 测试
 
