@@ -225,6 +225,34 @@ def test_memory_builds_reflections():
     assert any(item["topic"] == "risk" and "需核实导师最新招生状态" in item["content"] for item in reflections)
 
 
+def test_context_compressor_builds_structured_summary():
+    from app.memory.compression import ContextCompressor
+    from app.models.schemas import MemoryEvent, MemoryState
+
+    memory = MemoryState(session_id="compress-session")
+    memory.profile.research_interests = ["多模态", "RAG"]
+    memory.profile.preferred_locations = ["上海"]
+    memory.profile.target_degree = "硕士"
+    memory.semantic.application_strategy = ["顶会论文导向"]
+    memory.procedural.workflow_preferences = ["先查论文和主页再联系"]
+    memory.episodic_events = [MemoryEvent(type="contacted", tutor_name="张三")]
+    memory.recent_messages = [
+        {"role": "user", "content": "第一轮对话"},
+        {"role": "assistant", "content": "第二轮回复"},
+        {"role": "user", "content": "第三轮对话"},
+    ]
+
+    summary = ContextCompressor(recent_window=2).compress(memory)
+
+    assert "用户画像" in summary
+    assert "多模态" in summary
+    assert "顶会论文导向" in summary
+    assert "先查论文和主页再联系" in summary
+    assert "contacted:张三" in summary
+    assert "第一轮对话" not in summary
+    assert "第三轮对话" in summary
+
+
 def test_chat_replans_with_previous_constraints():
     client = TestClient(app)
     session_id = "replan-session"

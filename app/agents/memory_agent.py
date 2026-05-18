@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from app.config import get_settings
+from app.memory.compression import ContextCompressor
 from app.models.schemas import MemoryConflict, MemoryEvent, MemoryReflection, MemoryState, RelevantMemory
 from app.storage.repositories import MemoryRepository
 
@@ -58,9 +59,10 @@ NAME_PREFIX_WORDS = ["已经", "联系", "发邮件", "套磁", "沟通", "收�
 
 
 class MemoryAgent:
-    def __init__(self, repository: MemoryRepository | None = None):
+    def __init__(self, repository: MemoryRepository | None = None, compressor: ContextCompressor | None = None):
         self.repository = repository or MemoryRepository()
         self.settings = get_settings()
+        self.compressor = compressor or ContextCompressor()
 
     def load(self, session_id: str) -> MemoryState:
         memory = self.repository.get(session_id)
@@ -111,7 +113,7 @@ class MemoryAgent:
         self._update_reflections(memory)
         memory.recent_messages = self.repository.recent_messages(session_id, self.settings.max_context_messages)
         if len(memory.recent_messages) >= self.settings.summary_trigger_messages:
-            memory.summary = self._compress(memory)
+            memory.summary = self.compressor.compress(memory)
         return self.repository.save(memory)
 
     def _query_terms(self, query: str) -> set[str]:
@@ -237,18 +239,3 @@ class MemoryAgent:
                 merged.append(event)
                 seen.add(key)
         return merged[-50:]
-
-    def _compress(self, memory: MemoryState) -> str:
-        interests = "、".join(memory.profile.research_interests) or "未明确"
-        locations = "、".join(memory.profile.preferred_locations) or "未明确"
-        degree = memory.profile.target_degree or "未明确"
-        events = "；".join(f"{event.type}:{event.tutor_name or '未指明'}" for event in memory.episodic_events[-5:]) or "暂无"
-        strategy = "、".join(memory.semantic.application_strategy) or "未明确"
-        preferences = "、".join(memory.semantic.advisor_preferences) or "未明确"
-        risks = "、".join(memory.semantic.risk_flags) or "暂无"
-        workflow = "、".join(memory.procedural.workflow_preferences) or "未明确"
-        materials = "、".join(memory.procedural.material_preferences) or "未明确"
-        communication = "、".join(memory.procedural.communication_preferences) or "未明确"
-        schedule = "、".join(memory.procedural.scheduling_preferences) or "未明确"
-        recent = "；".join(f"{item['role']}：{item['content'][:60]}" for item in memory.recent_messages[-4:])
-        return f"用户关注方向：{interests}；地区偏好：{locations}；目标阶段：{degree}。申请策略：{strategy}；导师偏好：{preferences}；风险提示：{risks}。流程偏好：{workflow}；材料偏好：{materials}；沟通偏好：{communication}；时间安排：{schedule}。近期事件：{events}。近期对话：{recent}"
