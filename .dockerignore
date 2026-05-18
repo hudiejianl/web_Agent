@@ -1,0 +1,16 @@
+.git
+.claude
+.venv
+venv
+__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.env
+.env.*
+!.env.example
+data/runtime
+*.sqlite3
+*.db
+Thumbs.db
+.DS_Store

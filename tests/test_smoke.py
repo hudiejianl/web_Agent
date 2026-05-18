@@ -10,6 +10,20 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
+def test_run_script_invokes_uvicorn(monkeypatch):
+    from scripts import run
+
+    calls = []
+    monkeypatch.setenv("HOST", "0.0.0.0")
+    monkeypatch.setenv("PORT", "9000")
+    monkeypatch.setenv("RELOAD", "true")
+    monkeypatch.setattr(run.uvicorn, "run", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    run.main()
+
+    assert calls == [(("app.main:app",), {"host": "0.0.0.0", "port": 9000, "reload": True})]
+
+
 def test_health():
     client = TestClient(app)
     response = client.get("/api/health", headers={"X-Request-ID": "test-request-id"})
