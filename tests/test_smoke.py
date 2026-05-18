@@ -414,6 +414,79 @@ def test_browser_research_scores_page_quality_and_confidence():
     assert candidate.confidence > 0.7
 
 
+def test_browser_research_follows_deep_navigation_chain(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+    from app.services.browser_research import BrowserResearchService
+    from app.services.ingestion import IngestionService
+
+    visited = []
+
+    def fake_fetch(self, url, use_playwright=False, actions=None):
+        visited.append(url)
+        if "search" in url:
+            return {
+                "url": url,
+                "title": "Search",
+                "text": "search results",
+                "links": [{"text": "示例大学", "url": "https://www.example.edu.cn"}],
+            }
+        if url == "https://www.example.edu.cn":
+            return {
+                "url": url,
+                "title": "示例大学",
+                "text": "示例大学 计算机学院 人工智能学院",
+                "links": [{"text": "计算机学院", "url": "https://cs.example.edu.cn"}],
+            }
+        if url == "https://cs.example.edu.cn":
+            return {
+                "url": url,
+                "title": "计算机学院",
+                "text": "计算机学院 师资队伍 人工智能 多模态",
+                "links": [{"text": "师资队伍", "url": "https://cs.example.edu.cn/faculty"}],
+            }
+        if url == "https://cs.example.edu.cn/faculty":
+            return {
+                "url": url,
+                "title": "师资队伍",
+                "text": "教师队伍 导师简介",
+                "links": [{"text": "张三 教授 个人主页", "url": "https://cs.example.edu.cn/teacher/zhangsan"}],
+            }
+        if url == "https://cs.example.edu.cn/teacher/zhangsan":
+            return {
+                "url": url,
+                "title": "张三 教授",
+                "text": "张三 教授 研究方向 人工智能 多模态 招生 email zhangsan@example.edu.cn",
+                "links": [{"text": "代表论文", "url": "https://cs.example.edu.cn/teacher/zhangsan/papers"}],
+            }
+        return {
+            "url": url,
+            "title": "代表论文",
+            "text": "张三 代表论文 多模态 大模型",
+            "links": [],
+        }
+
+    def fake_ingest_profile(self, profile):
+        profile.id = profile.id or "deep-tutor"
+        return profile
+
+    monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
+    monkeypatch.setattr(IngestionService, "ingest_profile", fake_ingest_profile)
+    monkeypatch.setattr(BrowserResearchService, "_build_search_urls", lambda self, request, rewritten_queries: ["https://example.com/search?q=deep"])
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/browser/research",
+        json={"query": "人工智能 多模态 导师", "allowed_domains": ["example.edu.cn"], "max_candidates": 8, "max_ingest": 1, "navigation_depth": 4, "max_navigation_pages": 8, "use_playwright": False},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "https://cs.example.edu.cn/teacher/zhangsan" in visited
+    assert "https://cs.example.edu.cn/teacher/zhangsan/papers" in [item["url"] for item in payload["candidates"]]
+    assert {item["link_type"] for item in payload["candidates"]} & {"school", "college", "faculty_list", "profile", "paper"}
+    assert any(item["action"] == "discover_navigation_links" and "深链路" in item["detail"] for item in payload["trace"])
+
+
 def test_browser_research_endpoint(monkeypatch):
     from app.agents.browser_agent import BrowserAgent
     from app.services.browser_research import BrowserResearchService

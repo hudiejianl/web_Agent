@@ -116,13 +116,17 @@ class BrowserResearchService:
         if request.navigation_depth <= 0 or not candidates:
             return candidates
         result_filter = SearchResultFilter(ResultFilterConfig(allowed_domains=tuple(allowed_domains), threshold=4.0))
-        filter_query = " ".join([request.query, *rewritten_queries, "导师 教师 个人主页 研究方向"])
+        filter_query = " ".join([request.query, *rewritten_queries, "大学 学院 师资 导师 教师 个人主页 论文 研究方向"])
+        for candidate in candidates:
+            candidate.link_type = self._navigation_link_type(candidate.url, candidate.text)
+            candidate.depth = 0
         collected = {candidate.url: candidate for candidate in candidates}
         navigation_limit = max(1, min(request.max_navigation_pages, 30))
         navigation_queue = candidates[: max(1, min(navigation_limit, len(candidates)))]
         visited: set[str] = set()
         discovered_count = 0
         pagination_count = 0
+        deep_count = 0
         while navigation_queue and len(visited) < navigation_limit:
             page_candidate = navigation_queue.pop(0)
             if page_candidate.url in visited:
@@ -131,26 +135,49 @@ class BrowserResearchService:
             try:
                 page = self.browser.fetch(page_candidate.url, use_playwright=request.use_playwright, actions=[])
                 page_candidate.status = "browsed"
+                page_candidate.page_quality = self._page_quality(page)
+                self._score_candidate_confidence(page_candidate)
                 trace.append(self._trace("Browser Agent", "navigate_candidate_page", "completed", f"导航访问候选入口：{page_candidate.url}"))
             except Exception as exc:
                 page_candidate.error = str(exc)[:300]
                 trace.append(self._trace("Browser Agent", "navigate_candidate_page", "failed", f"导航入口失败：{page_candidate.url}", self._error_metadata(exc)))
                 continue
             for pagination in self._pagination_links(page.get("links", []), page_candidate.url):
+                pagination.depth = page_candidate.depth
                 if pagination.url not in collected:
                     self._score_candidate_confidence(pagination)
                     collected[pagination.url] = pagination
                     pagination_count += 1
-                if pagination.url not in visited and len(visited) + len(navigation_queue) < navigation_limit:
+                if self._should_follow_navigation(pagination, request.navigation_depth) and pagination.url not in visited and len(visited) + len(navigation_queue) < navigation_limit:
                     navigation_queue.append(pagination)
             for discovered in result_filter.filter_links(page.get("links", []), filter_query, page_candidate.url):
                 discovered.score += max(page_candidate.score * 0.2, 1.0)
+                discovered.link_type = self._navigation_link_type(discovered.url, discovered.text)
+                discovered.depth = page_candidate.depth + 1
                 self._score_candidate_confidence(discovered)
                 if discovered.url not in collected:
                     collected[discovered.url] = discovered
                     discovered_count += 1
+                if self._should_follow_navigation(discovered, request.navigation_depth) and discovered.url not in visited and len(visited) + len(navigation_queue) < navigation_limit:
+                    navigation_queue.append(discovered)
+            for deep_link in self._deep_navigation_links(page.get("links", []), page_candidate.url, allowed_domains, page_candidate.depth):
+                if deep_link.url not in collected:
+                    self._score_candidate_confidence(deep_link)
+                    collected[deep_link.url] = deep_link
+                    deep_count += 1
+                else:
+                    existing = collected[deep_link.url]
+                    if deep_link.score > existing.score:
+                        existing.score = deep_link.score
+                        existing.reason = deep_link.reason
+                        existing.link_type = deep_link.link_type
+                        existing.depth = min(existing.depth, deep_link.depth)
+                        self._score_candidate_confidence(existing)
+                    deep_link = existing
+                if self._should_follow_navigation(deep_link, request.navigation_depth) and deep_link.url not in visited and len(visited) + len(navigation_queue) < navigation_limit:
+                    navigation_queue.append(deep_link)
         expanded = sorted(collected.values(), key=lambda item: (item.confidence, item.score), reverse=True)[: max(1, min(request.max_candidates, 20))]
-        trace.append(self._trace("Browser Agent", "discover_navigation_links", "completed", f"导航式发现新增 {discovered_count} 个候选链接，识别分页 {pagination_count} 个"))
+        trace.append(self._trace("Browser Agent", "discover_navigation_links", "completed", f"导航式发现新增 {discovered_count} 个候选链接，识别分页 {pagination_count} 个，深链路 {deep_count} 个"))
         return expanded
 
     def _browse_and_ingest(self, request: BrowserResearchRequest, candidates: list[CandidateLink], trace: list[AgentTrace]) -> list[TutorProfile]:
@@ -190,8 +217,64 @@ class BrowserResearchService:
                 continue
             lower = f"{text} {url}".lower()
             if any(token in lower for token in ["下一页", "下页", "next", "page", "p=", "page=", "index_", "list_"]):
-                results.append(CandidateLink(text=text[:160], url=url, source_url=source_url, score=6.0, reason="分页链接"))
+                results.append(CandidateLink(text=text[:160], url=url, source_url=source_url, score=6.0, reason="分页链接", link_type="pagination"))
         return results
+
+    def _deep_navigation_links(self, links: object, source_url: str, allowed_domains: list[str], source_depth: int) -> list[CandidateLink]:
+        if not isinstance(links, list):
+            return []
+        source_host = urlparse(source_url).netloc.lower()
+        allowed = [domain.lower() for domain in allowed_domains]
+        results: list[CandidateLink] = []
+        for raw in links:
+            if not isinstance(raw, dict):
+                continue
+            text = str(raw.get("text") or "").strip()
+            url = str(raw.get("url") or "").strip()
+            if not url.startswith("http"):
+                continue
+            host = urlparse(url).netloc.lower()
+            lower = f"{text} {url}".lower()
+            if any(token in lower for token in ["login", "signin", "captcha", "javascript:", "mailto:", "登录", "验证码"]):
+                continue
+            if host != source_host and not any(domain in host for domain in allowed):
+                continue
+            link_type = self._navigation_link_type(url, text)
+            if link_type == "other":
+                continue
+            score = {
+                "school": 5.0,
+                "college": 6.0,
+                "faculty_list": 8.0,
+                "profile": 9.0,
+                "paper": 7.0,
+                "pagination": 6.0,
+            }.get(link_type, 4.0)
+            if host == source_host:
+                score += 1.0
+            results.append(CandidateLink(text=text[:160], url=url, source_url=source_url, score=score, reason=f"深链路:{link_type}", link_type=link_type, depth=source_depth + 1))
+        return sorted(results, key=lambda item: item.score, reverse=True)
+
+    def _navigation_link_type(self, url: str, text: str) -> str:
+        lower = f"{text} {url}".lower()
+        if any(token in lower for token in ["下一页", "下页", "next", "page=", "p=", "index_", "list_"]):
+            return "pagination"
+        if any(token in lower for token in ["publication", "publications", "paper", "papers", "pubs", "论文", "科研成果", "学术成果", "代表论文"]):
+            return "paper"
+        if any(token in lower for token in ["个人主页", "教师简介", "个人简介", "导师简介", "profile", "teacherinfo", "person", "tutor"]):
+            return "profile"
+        if any(token in lower for token in ["teacher", "faculty", "staff", "people", "师资队伍", "师资力量", "教师队伍", "教师名录", "导师队伍"]):
+            return "faculty_list"
+        if any(token in lower for token in ["学院", "院系", "系", "college", "school", "department", "计算机", "人工智能"]):
+            return "college"
+        if any(token in lower for token in ["大学", "university", "edu.cn"]):
+            return "school"
+        return "other"
+
+    def _should_follow_navigation(self, candidate: CandidateLink, navigation_depth: int) -> bool:
+        if candidate.depth > navigation_depth:
+            return False
+        return candidate.link_type in {"school", "college", "faculty_list", "pagination", "profile"}
 
     def _page_quality(self, page: dict) -> float:
         text = page.get("text", "") or ""

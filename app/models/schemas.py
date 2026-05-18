@@ -254,6 +254,8 @@ class CandidateLink(BaseModel):
     page_quality: float = 0.0
     confidence: float = 0.0
     reason: str = ""
+    link_type: str = "candidate"
+    depth: int = 0
     status: Literal["pending", "browsed", "ingested", "failed", "skipped"] = "pending"
     error: str | None = None
 
