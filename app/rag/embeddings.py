@@ -8,6 +8,13 @@ import requests
 from app.config import get_settings
 
 
+BGE_MODEL_ALIASES = {
+    "bge-m3": "BAAI/bge-m3",
+    "bge-large-zh": "BAAI/bge-large-zh-v1.5",
+    "bge-large-zh-v1.5": "BAAI/bge-large-zh-v1.5",
+}
+
+
 class HashingEmbeddingFunction:
     def __init__(self, dimensions: int = 384):
         self.dimensions = dimensions
@@ -53,9 +60,10 @@ def get_embedding_function():
         return OpenAICompatibleEmbeddingFunction(settings.embedding_model, settings.embedding_api_key, base_url, settings.embedding_timeout_seconds)
     if settings.embedding_model == "hashing":
         return HashingEmbeddingFunction()
+    model_name = BGE_MODEL_ALIASES.get(settings.embedding_model, settings.embedding_model)
     try:
         from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
-        return SentenceTransformerEmbeddingFunction(model_name=settings.embedding_model)
+        return SentenceTransformerEmbeddingFunction(model_name=model_name)
     except Exception:
         return HashingEmbeddingFunction()

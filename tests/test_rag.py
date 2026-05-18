@@ -112,6 +112,48 @@ def test_openai_compatible_embedding_function_calls_embeddings_api(monkeypatch):
     assert calls[0]["timeout"] == 12
 
 
+def test_bge_embedding_alias_uses_sentence_transformer_model(monkeypatch):
+    created = []
+
+    class FakeSettings:
+        embedding_provider = "local"
+        embedding_api_key = ""
+        embedding_base_url = ""
+        openai_base_url = "https://api.openai.com/v1"
+        embedding_model = "bge-m3"
+        embedding_timeout_seconds = 30
+
+    class FakeSentenceTransformerEmbeddingFunction:
+        def __init__(self, model_name):
+            created.append(model_name)
+
+    monkeypatch.setattr("app.rag.embeddings.get_settings", lambda: FakeSettings())
+    monkeypatch.setitem(__import__("sys").modules, "chromadb.utils.embedding_functions", type("FakeModule", (), {"SentenceTransformerEmbeddingFunction": FakeSentenceTransformerEmbeddingFunction}))
+
+    get_embedding_function()
+
+    assert created == ["BAAI/bge-m3"]
+
+
+def test_bge_embedding_falls_back_when_model_load_fails(monkeypatch):
+    class FakeSettings:
+        embedding_provider = "local"
+        embedding_api_key = ""
+        embedding_base_url = ""
+        openai_base_url = "https://api.openai.com/v1"
+        embedding_model = "bge-large-zh"
+        embedding_timeout_seconds = 30
+
+    class FailingSentenceTransformerEmbeddingFunction:
+        def __init__(self, model_name):
+            raise RuntimeError("model unavailable")
+
+    monkeypatch.setattr("app.rag.embeddings.get_settings", lambda: FakeSettings())
+    monkeypatch.setitem(__import__("sys").modules, "chromadb.utils.embedding_functions", type("FakeModule", (), {"SentenceTransformerEmbeddingFunction": FailingSentenceTransformerEmbeddingFunction}))
+
+    assert isinstance(get_embedding_function(), HashingEmbeddingFunction)
+
+
 def test_embedding_function_falls_back_without_api_key(monkeypatch):
     class FakeSettings:
         embedding_provider = "openai-compatible"

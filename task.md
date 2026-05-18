@@ -299,7 +299,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 目标：提升检索质量，使推荐不再依赖简单 hashing。
 
-- [ ] 支持 BGE-M3 / bge-large-zh embedding
+- [x] 支持 BGE-M3 / bge-large-zh embedding
 - [x] 支持 OpenAI / Claude 兼容 embedding API
 - [x] 支持 BM25 关键词检索
 - [x] 实现 Hybrid Retrieval：BM25 + Dense Retrieval
@@ -380,7 +380,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 实现 Procedural Memory：记录申请流程、材料准备、沟通和时间安排偏好。
    - [x] 实现 Memory Retrieval：回答时检索相关历史记忆。
 5. **研究级 RAG 继续增强**
-   - [ ] 接入 BGE-M3 / bge-large-zh embedding。
+   - [x] 接入 BGE-M3 / bge-large-zh embedding。
    - [x] 接入 OpenAI-compatible embedding API。
    - [x] 接入 bge-reranker / jina-reranker。
    - [x] 实现 chunking 策略，后续继续评估不同 chunk size。
