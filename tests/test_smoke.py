@@ -94,6 +94,9 @@ def test_chat_returns_tutor_recommendations():
     assert payload["plan"]["steps"]
     assert payload["trace"]
     assert any(item["agent"] == "Planner Agent" for item in payload["trace"])
+    assert payload["agent_handoffs"]
+    assert any(item["source_agent"] == "Memory Agent" and item["target_agent"] == "Planner Agent" for item in payload["agent_handoffs"])
+    assert any(item["payload_type"] == "retrieval_results" for item in payload["agent_handoffs"])
 
     trace_response = client.get(f"/api/traces/{payload['trace_id']}")
     assert trace_response.status_code == 200

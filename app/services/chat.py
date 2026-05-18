@@ -30,4 +30,5 @@ class ChatService:
             retrieval_evidence=state.get("retrieval_evidence", []),
             memory=state["memory"],
             trace=trace,
+            agent_handoffs=state.get("agent_handoffs", []),
         )

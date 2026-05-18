@@ -187,6 +187,15 @@ class AgentTrace(BaseModel):
     metadata: dict[str, str | int | float | bool] = Field(default_factory=dict)
 
 
+class AgentHandoff(BaseModel):
+    source_agent: str
+    target_agent: str
+    payload_type: str
+    summary: str
+    payload: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 # AgentTraceRun 表示一次请求的完整轨迹，可通过 trace_id 从数据库回查。
 class AgentTraceRun(BaseModel):
     trace_id: str
@@ -210,6 +219,7 @@ class ChatResponse(BaseModel):
     retrieval_evidence: list[RetrievalEvidence] = Field(default_factory=list)
     memory: MemoryState
     trace: list[AgentTrace] = Field(default_factory=list)
+    agent_handoffs: list[AgentHandoff] = Field(default_factory=list)
 
 
 class IngestUrlRequest(BaseModel):

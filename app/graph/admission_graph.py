@@ -7,7 +7,7 @@ from langgraph.graph import END, StateGraph
 from app.agents.advisor_agent import AdvisorAgent
 from app.agents.memory_agent import MemoryAgent
 from app.agents.planner_agent import PlannerAgent
-from app.models.schemas import AgentPlan, AgentTrace, MemoryState, RelevantMemory, RetrievalEvidence, TutorProfile
+from app.models.schemas import AgentHandoff, AgentPlan, AgentTrace, MemoryState, RelevantMemory, RetrievalEvidence, TutorProfile
 from app.rag.evidence import RetrievalEvidenceBuilder
 from app.rag.retriever import TutorRetriever
 from app.services.ingestion import IngestionService
@@ -22,6 +22,7 @@ class AdmissionState(TypedDict, total=False):
     tutors: list[TutorProfile]
     retrieval_evidence: list[RetrievalEvidence]
     relevant_memories: list[RelevantMemory]
+    agent_handoffs: list[AgentHandoff]
     ingested_tutors: list[TutorProfile]
     answer: str
     trace: list[AgentTrace]
@@ -61,6 +62,7 @@ class AdmissionGraph:
 
     def _load_memory(self, state: AdmissionState) -> AdmissionState:
         state["trace"] = []
+        state["agent_handoffs"] = []
         state["memory"] = self.memory_agent.load(state["session_id"])
         state["relevant_memories"] = self.memory_agent.retrieve_relevant(state["memory"], state["message"])
         self._trace(
@@ -77,6 +79,19 @@ class AdmissionGraph:
             "completed",
             f"召回 {len(state['relevant_memories'])} 条相关历史记忆",
             {"memory_count": len(state["relevant_memories"])},
+        )
+        self._handoff(
+            state,
+            "Memory Agent",
+            "Planner Agent",
+            "memory_context",
+            f"用户画像方向 {len(state['memory'].profile.research_interests)} 项，相关记忆 {len(state['relevant_memories'])} 条",
+            {
+                "research_interests": state["memory"].profile.research_interests,
+                "preferred_locations": state["memory"].profile.preferred_locations,
+                "target_degree": state["memory"].profile.target_degree or "",
+                "relevant_memory_count": len(state["relevant_memories"]),
+            },
         )
         return state
 
@@ -96,6 +111,19 @@ class AdmissionGraph:
             "completed",
             f"生成 {len(state['plan'].steps)} 个执行步骤，约束：{', '.join(state['plan'].constraints) or '无显式约束'}",
             {"step_count": len(state["plan"].steps), "is_replan": state["plan"].is_replan, "replan_from": state["plan"].replan_from or ""},
+        )
+        self._handoff(
+            state,
+            "Planner Agent",
+            "Browser Agent" if state["plan"].need_ingestion else "RAG Retriever",
+            "task_plan",
+            f"计划 {len(state['plan'].steps)} 步，检索={state['plan'].need_retrieval}，采集={state['plan'].need_ingestion}",
+            {
+                "constraints": state["plan"].constraints,
+                "step_ids": [step.id for step in state["plan"].steps],
+                "urls": state["plan"].urls,
+                "is_replan": state["plan"].is_replan,
+            },
         )
         return state
 
@@ -125,6 +153,14 @@ class AdmissionGraph:
             status,
             f"采集并入库 {len(ingested)} 个导师主页" + (f"，失败 {len(errors)} 个" if errors else ""),
             {"ingested_count": len(ingested), "failed_count": len(errors)},
+        )
+        self._handoff(
+            state,
+            "Browser Agent",
+            "RAG Retriever",
+            "ingested_profiles",
+            f"新增入库 {len(ingested)} 位导师，失败 {len(errors)} 个 URL",
+            {"tutors": [tutor.name for tutor in ingested], "errors": errors[:3]},
         )
         return state
 
@@ -159,6 +195,30 @@ class AdmissionGraph:
             "analyze_candidates",
             "completed" if state["tutors"] else "skipped",
             "已依据研究方向、招生方向、论文和证据片段形成匹配基础" if state["tutors"] else "本地知识库暂无候选导师，跳过候选分析",
+        )
+        self._handoff(
+            state,
+            "RAG Retriever",
+            "Research Agent",
+            "retrieval_results",
+            f"召回 {len(state['tutors'])} 位导师，证据 {len(state['retrieval_evidence'])} 条",
+            {
+                "query": query,
+                "tutors": [tutor.name for tutor in state["tutors"]],
+                "evidence_fields": list(dict.fromkeys(item.field for item in state["retrieval_evidence"])),
+            },
+        )
+        self._handoff(
+            state,
+            "Research Agent",
+            "Advisor Agent",
+            "candidate_analysis",
+            f"分析 {len(state['tutors'])} 位候选导师，形成推荐输入",
+            {
+                "candidate_count": len(state["tutors"]),
+                "top_candidates": [tutor.name for tutor in state["tutors"][:3]],
+                "evidence_count": len(state["retrieval_evidence"]),
+            },
         )
         return state
 
@@ -200,6 +260,14 @@ class AdmissionGraph:
             "completed",
             "生成带证据、匹配理由和下一步行动的升学建议",
         )
+        self._handoff(
+            state,
+            "Advisor Agent",
+            "Memory Agent",
+            "conversation_outcome",
+            f"生成 {len(state['answer'])} 字建议，准备写入长期记忆",
+            {"answer_length": len(state["answer"]), "used_llm": not llm_result.used_fallback},
+        )
         return state
 
     def _save_memory(self, state: AdmissionState) -> AdmissionState:
@@ -224,6 +292,19 @@ class AdmissionGraph:
     ) -> None:
         state.setdefault("trace", []).append(
             AgentTrace(agent=agent, action=action, status=status, detail=detail, metadata=metadata or {})
+        )
+
+    def _handoff(self, state: AdmissionState, source_agent: str, target_agent: str, payload_type: str, summary: str, payload: dict) -> None:
+        state.setdefault("agent_handoffs", []).append(
+            AgentHandoff(source_agent=source_agent, target_agent=target_agent, payload_type=payload_type, summary=summary, payload=payload)
+        )
+        self._trace(
+            state,
+            source_agent,
+            "handoff_context",
+            "completed",
+            f"向 {target_agent} 交接 {payload_type}：{summary}",
+            {"target_agent": target_agent, "payload_type": payload_type},
         )
 
     def _mark_step(self, state: AdmissionState, agent: str, status: str):

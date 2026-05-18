@@ -138,6 +138,7 @@ function App() {
             ['trace', 'Trace'],
             ['evidence', 'Evidence'],
             ['memory', 'Memory'],
+            ['handoffs', 'Agent Handoffs'],
             ['candidates', 'Browser Candidates'],
             ['tutors', 'Tutors'],
           ].map(([id, label]) => (
@@ -148,6 +149,7 @@ function App() {
         {activeTab === 'trace' && <TraceView items={chatResult?.trace || researchResult?.trace || []} />}
         {activeTab === 'evidence' && <EvidenceView items={chatResult?.retrieval_evidence || []} />}
         {activeTab === 'memory' && <JsonView data={chatResult?.memory || {}} />}
+        {activeTab === 'handoffs' && <HandoffView items={chatResult?.agent_handoffs || []} />}
         {activeTab === 'candidates' && <CandidateView items={researchResult?.candidates || []} />}
         {activeTab === 'tutors' && <TutorView items={[...(chatResult?.tutors || []), ...(researchResult?.tutors || [])]} />}
       </section>
@@ -177,6 +179,11 @@ function EvidenceView({ items }) {
 function CandidateView({ items }) {
   if (!items.length) return <Empty text="暂无候选链路" />
   return items.map((item) => <article className="row" key={item.url}><Badge value={item.link_type || item.status} /><div><strong>{item.text || item.url}</strong><p>{item.url}</p><small>depth {item.depth} · confidence {item.confidence} · {item.reason}</small></div></article>)
+}
+
+function HandoffView({ items }) {
+  if (!items.length) return <Empty text="暂无 Agent 交接记录" />
+  return items.map((item, index) => <article className="row" key={`${item.source_agent}-${item.target_agent}-${index}`}><Badge value={item.payload_type} /><div><strong>{item.source_agent} → {item.target_agent}</strong><p>{item.summary}</p><small>{JSON.stringify(item.payload || {})}</small></div></article>)
 }
 
 function TutorView({ items }) {

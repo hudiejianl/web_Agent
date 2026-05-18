@@ -59,11 +59,13 @@
         <button type="button" class="tab" onclick="showPanel('tracePanel', this)">Agent Trace</button>
         <button type="button" class="tab" onclick="showPanel('evidencePanel', this)">检索证据</button>
         <button type="button" class="tab" onclick="showPanel('memoryPanel', this)">长期记忆</button>
+        <button type="button" class="tab" onclick="showPanel('handoffPanel', this)">Agent 交接</button>
       </div>
       <div id="planPanel" class="panel active"><div id="plan" class="muted">暂无任务计划</div></div>
       <div id="tracePanel" class="panel"><div id="trace" class="muted">暂无执行轨迹</div></div>
       <div id="evidencePanel" class="panel"><div id="retrievalEvidence" class="muted">暂无检索证据</div></div>
       <div id="memoryPanel" class="panel"><pre id="memoryView">暂无长期记忆</pre></div>
+      <div id="handoffPanel" class="panel"><div id="handoffs" class="muted">暂无 Agent 交接记录</div></div>
       <h3>RAG Evaluation 报告</h3>
       <p class="muted">对比 baseline、hybrid 和 reranker 三种检索策略的 Recall、Precision、Relevance 与 Faithfulness。</p>
       <p><button type="button" onclick="runRagEvaluationReport()">生成评估报告</button></p>
@@ -129,6 +131,7 @@
       renderTrace(data.trace || []);
       renderTutors(data.tutors || []);
       renderMemory(data.memory);
+      renderHandoffs(data.agent_handoffs || []);
     }
 
     async function ingestUrl() {
@@ -266,6 +269,17 @@
           ${item.error ? `<br /><span class="danger">错误：${escapeHtml(item.error)}</span>` : ''}
         </div>
       `).join('') || '<p class="muted">暂无候选链路</p>';
+    }
+
+    function renderHandoffs(items) {
+      document.getElementById('handoffs').innerHTML = items.map(item => `
+        <div class="trace">
+          <strong>${escapeHtml(item.source_agent)} → ${escapeHtml(item.target_agent)}</strong>
+          <span class="badge">${escapeHtml(item.payload_type)}</span><br />
+          <span>${escapeHtml(item.summary)}</span><br />
+          <span class="muted">${escapeHtml(JSON.stringify(item.payload || {}))}</span>
+        </div>
+      `).join('') || '<p class="muted">暂无 Agent 交接记录</p>';
     }
 
     function renderTutors(items) {

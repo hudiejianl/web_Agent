@@ -425,7 +425,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 6. Planner Agent 升级为真正任务拆解：搜索导师 → 检查论文 → 分析研究方向 → 判断是否招生 → 综合评分。
 7. 长期记忆升级为 Episodic / Semantic / Procedural Memory。
 8. 上下文压缩升级为独立 `app/memory/compression.py`，支持滑动窗口与结构化语义摘要。`[已完成]`
-9. 多 Agent 共享状态与通信增强。
+9. 多 Agent 共享状态与通信增强：通过 `agent_handoffs` 暴露 Memory → Planner → Retriever → Research → Advisor → Memory 的结构化交接上下文。`[已完成]`
 
 ### 第三阶段：工程化与科研味
 
