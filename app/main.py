@@ -20,7 +20,7 @@ from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
 from app.services.browser_research import BrowserResearchService
 from app.services.chat import ChatService
-from app.services.ingestion import IngestionService, ensure_seed_data
+from app.services.ingestion import IngestionService, ProfileQualityError, ensure_seed_data
 from app.services.seed_sites import UniversitySeedSiteService
 from app.storage.database import init_database
 from app.storage.repositories import MemoryRepository, PlanRepository, RAGEvaluationRepository, TraceRepository
@@ -130,7 +130,10 @@ def chat(request: ChatRequest) -> ChatResponse:
 
 @app.post("/api/ingest/url", response_model=IngestUrlResponse)
 def ingest_url(request: IngestUrlRequest) -> IngestUrlResponse:
-    profile = IngestionService().ingest_url(str(request.url))
+    try:
+        profile = IngestionService().ingest_url(str(request.url))
+    except ProfileQualityError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return IngestUrlResponse(tutor=profile, indexed=True)
 
 

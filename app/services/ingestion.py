@@ -6,8 +6,16 @@ from app.config import get_settings
 from app.crawlers.faculty import FacultyCrawler
 from app.models.schemas import TutorProfile
 from app.rag.vector_store import VectorStore
+from app.services.profile_quality import ProfileQualityScorer
 from app.storage.database import init_database
 from app.storage.repositories import TutorRepository, load_tutors_from_json
+
+
+class ProfileQualityError(ValueError):
+    def __init__(self, score: float, reasons: list[str]):
+        self.score = score
+        self.reasons = reasons
+        super().__init__(f"导师档案质量不足，质量分 {score}，原因：{'；'.join(reasons)}")
 
 
 class IngestionService:
@@ -15,6 +23,7 @@ class IngestionService:
         self.repository = repository or TutorRepository()
         self.vector_store = vector_store or VectorStore()
         self.crawler = FacultyCrawler()
+        self.profile_quality = ProfileQualityScorer()
 
     def ingest_profile(self, profile: TutorProfile) -> TutorProfile:
         profile = self.repository.upsert(profile)
@@ -22,8 +31,29 @@ class IngestionService:
         return profile
 
     def ingest_url(self, url: str) -> TutorProfile:
-        profile = self.crawler.crawl(url)
+        page = self.crawler.browser.fetch(url)
+        profile = self.crawler.researcher.structure_faculty_page(page)
+        profile.homepage = profile.homepage or url
+        quality = self.profile_quality.score(profile, url, title=str(page.get("title") or ""), text=str(page.get("text") or ""), page_quality=self._page_quality(page))
+        if not quality.ingest_eligible:
+            raise ProfileQualityError(quality.score, quality.reasons)
         return self.ingest_profile(profile)
+
+    def _page_quality(self, page: dict) -> float:
+        text = page.get("text", "") or ""
+        links = page.get("links", []) or []
+        score = 0.0
+        if len(text) >= 300:
+            score += 0.25
+        if len(text) >= 1000:
+            score += 0.2
+        if any(keyword in text for keyword in ["研究方向", "招生", "论文", "个人主页", "教授", "导师"]):
+            score += 0.25
+        if any(keyword in text.lower() for keyword in ["email", "@", "publication", "research"]):
+            score += 0.15
+        if links:
+            score += 0.15
+        return round(min(score, 1.0), 4)
 
     def ingest_seed_file(self, path: str = "data/sample/faculty_seed.json") -> list[TutorProfile]:
         init_database()

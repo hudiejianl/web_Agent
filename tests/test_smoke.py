@@ -121,6 +121,54 @@ def test_clean_invalid_tutors_dry_run(monkeypatch):
     assert result["remaining_report"]["quality_passed"] is True
 
 
+def test_ingest_url_rejects_noisy_profile(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+    from app.services.ingestion import IngestionService, ProfileQualityError
+
+    def fake_fetch(self, url, use_playwright=False, actions=None):
+        return {"url": url, "title": "Search", "text": "site:edu.cn 武汉 多模态 人工智能 导师 旅游 bing 未知", "links": []}
+
+    monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
+
+    with pytest.raises(ProfileQualityError) as exc:
+        IngestionService().ingest_url("https://www.bing.com/search?q=site%3Aedu.cn")
+
+    assert "搜索结果页" in str(exc.value)
+
+
+def test_ingest_url_accepts_quality_profile(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+    from app.models.schemas import TutorProfile
+    from app.services.ingestion import IngestionService
+
+    saved = []
+
+    class FakeRepository:
+        def upsert(self, profile: TutorProfile) -> TutorProfile:
+            profile.id = "manual-ingest"
+            saved.append(profile)
+            return profile
+
+    class FakeVectorStore:
+        def upsert_tutor(self, profile: TutorProfile) -> None:
+            return None
+
+    def fake_fetch(self, url, use_playwright=False, actions=None):
+        return {
+            "url": url,
+            "title": "张三 教授 - 示例大学计算机学院",
+            "text": "张三 教授 示例大学 计算机学院 个人主页 教师简介 研究方向 人工智能 多模态 招生 代表论文 zhangsan@example.edu.cn " * 8,
+            "links": [{"text": "代表论文", "url": "https://cs.example.edu.cn/teacher/zhangsan/papers"}],
+        }
+
+    monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
+
+    profile = IngestionService(repository=FakeRepository(), vector_store=FakeVectorStore()).ingest_url("https://cs.example.edu.cn/teacher/zhangsan")
+
+    assert profile.id == "manual-ingest"
+    assert profile.name == "张三"
+    assert saved[0].homepage == "https://cs.example.edu.cn/teacher/zhangsan"
+
 
 def test_demo_check_runs_core_endpoints(monkeypatch):
     from scripts import demo_check

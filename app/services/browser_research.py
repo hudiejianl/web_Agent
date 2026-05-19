@@ -11,6 +11,7 @@ from app.agents.research_agent import ResearchAgent
 from app.models.schemas import AgentTrace, BrowserResearchQualityReport, BrowserResearchRequest, BrowserResearchResponse, CandidateLink, TutorProfile
 from app.search.result_filter import ResultFilterConfig, SearchResultFilter
 from app.services.ingestion import IngestionService
+from app.services.profile_quality import ProfileQualityScorer
 from app.services.seed_sites import UniversitySeedSiteService
 from app.storage.repositories import TraceRepository
 
@@ -30,6 +31,7 @@ class BrowserResearchService:
         self.ingestion = ingestion or IngestionService()
         self.query_rewriter = query_rewriter or QueryRewriter()
         self.seed_sites = seed_sites or UniversitySeedSiteService()
+        self.profile_quality = ProfileQualityScorer()
         self.traces = TraceRepository()
 
     def research(self, request: BrowserResearchRequest) -> BrowserResearchResponse:
@@ -257,18 +259,7 @@ class BrowserResearchService:
         )
 
     def _candidate_precheck_reasons(self, candidate: CandidateLink) -> list[str]:
-        url = candidate.url.lower()
-        host = urlparse(url).netloc.lower()
-        reasons: list[str] = []
-        if any(domain in host for domain in ["bing.com", "baidu.com", "sogou.com", "so.com"]) or "/search?" in url:
-            reasons.append("搜索结果页不能作为导师主页")
-        if host.endswith("gov.cn") or "baike.baidu.com" in host:
-            reasons.append("非导师主页来源")
-        if candidate.link_type in {"school", "college", "faculty_list", "pagination", "paper"}:
-            reasons.append(f"{candidate.link_type} 链接只用于导航发现，不直接入库")
-        if any(token in url for token in ["login", "signin", "captcha"]):
-            reasons.append("登录或验证码页面不采集")
-        return reasons
+        return self.profile_quality.precheck_reasons(candidate.url, link_type=candidate.link_type)
 
     def _mark_candidate_rejected(self, candidate: CandidateLink, reasons: list[str], status: str = "failed") -> None:
         candidate.status = status
@@ -278,67 +269,17 @@ class BrowserResearchService:
         candidate.error = "；".join(reasons)
 
     def _score_profile_quality(self, profile: TutorProfile, candidate: CandidateLink, page: dict) -> None:
-        url = (profile.homepage or candidate.url or "").lower()
-        host = urlparse(url).netloc.lower()
-        name = (profile.name or "").strip()
-        text = f"{page.get('title') or ''} {page.get('text') or ''}"
-        lower_text = text.lower()
-        invalid_names = {"未知导师", "导师", "教师", "教授", "副教授", "讲师", "研究员", "特聘", "女副", "武汉市", "Professor", "Unknown"}
-        hard_reasons: list[str] = []
-        positive_reasons: list[str] = []
-        score = 0.0
-
-        if any(domain in host for domain in ["bing.com", "baidu.com", "sogou.com", "so.com"]) or "/search?" in url:
-            hard_reasons.append("搜索结果页不能作为导师主页")
-        if host.endswith("gov.cn") or "baike.baidu.com" in host:
-            hard_reasons.append("非导师主页来源")
-        if not name or name in invalid_names or len(name) > 12:
-            hard_reasons.append("导师姓名不可信")
-        elif any(token in name.lower() for token in ["site:", "http", "www", "search", "bing", "baidu"]) or any(token in name for token in ["æ", "å", "�"]):
-            hard_reasons.append("导师姓名疑似噪声")
-        else:
-            score += 0.25
-            positive_reasons.append("姓名可信")
-
-        has_profile_context = candidate.link_type == "profile" or any(token in url for token in ["teacher", "tutor", "profile", "person", "teacherinfo"]) or any(token in text for token in ["个人主页", "教师简介", "导师简介", "研究方向"])
-        if has_profile_context:
-            score += 0.2
-            positive_reasons.append("页面具备导师主页语境")
-        else:
-            hard_reasons.append("页面不像导师个人主页")
-
-        if profile.institution and profile.institution != "未知机构":
-            score += 0.15
-            positive_reasons.append("机构可信")
-        elif profile.department:
-            score += 0.1
-            positive_reasons.append("院系可信")
-        else:
-            hard_reasons.append("缺少可信机构或院系")
-
-        evidence_score = 0.0
-        if profile.research_areas:
-            evidence_score += 0.18
-            positive_reasons.append("识别到研究方向")
-        if profile.email:
-            evidence_score += 0.08
-            positive_reasons.append("识别到邮箱")
-        if profile.papers:
-            evidence_score += 0.09
-            positive_reasons.append("识别到论文线索")
-        if evidence_score == 0:
-            hard_reasons.append("缺少研究方向、邮箱或论文证据")
-        score += evidence_score
-
-        if any(token in lower_text for token in ["登录", "验证码", "captcha", "hotel", "旅游", "新闻", "百度", "bing", "无法访问", "404", "403"]):
-            hard_reasons.append("页面包含明显噪声或不可访问提示")
-
-        score += min(candidate.page_quality * 0.17, 0.17)
-        candidate.profile_quality_score = round(min(score, 1.0), 4)
-        candidate.quality_reasons = hard_reasons or positive_reasons
-        candidate.ingest_eligible = not hard_reasons and candidate.profile_quality_score >= 0.55
-        if not candidate.ingest_eligible and not hard_reasons:
-            candidate.quality_reasons = [*positive_reasons, "质量分低于入库阈值"]
+        result = self.profile_quality.score(
+            profile,
+            candidate.url,
+            title=str(page.get("title") or ""),
+            text=str(page.get("text") or ""),
+            link_type=candidate.link_type,
+            page_quality=candidate.page_quality,
+        )
+        candidate.profile_quality_score = result.score
+        candidate.quality_reasons = result.reasons
+        candidate.ingest_eligible = result.ingest_eligible
 
     def _pagination_links(self, links: object, source_url: str) -> list[CandidateLink]:
         if not isinstance(links, list):
