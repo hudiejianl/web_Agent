@@ -454,6 +454,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 22. Browser Research 候选预检与质量评分：新增候选入库前预检、导师档案质量分、可入库标记和拒绝原因展示，避免搜索页/列表页/噪声页误入库。`[已完成]`
 23. Browser Research dry-run 预检模式：新增只评分不写库的研究模式，两套前端均可一键预检真实公开页面质量，降低污染导师库风险。`[已完成]`
 24. Browser Research 候选质量报告：API 返回质量统计、拒绝原因分布和最高分候选，React 前端展示质量报告面板。`[已完成]`
+25. Browser Research 质量检查脚本：新增 `scripts/browser_quality_check.py`，对运行中的服务执行 dry-run 质量检查并基于合格候选数和平均质量分判定是否通过。`[已完成]`
 
 原因：
 
@@ -499,6 +500,13 @@ python -m uvicorn app.main:app --reload
 ```powershell
 conda activate webagent
 python -m pytest -q
+```
+
+Browser Research dry-run 质量检查：
+
+```powershell
+conda activate webagent
+python scripts/browser_quality_check.py --base-url http://127.0.0.1:8000 --query "武汉 多模态 人工智能 导师 个人主页"
 ```
 
 访问页面：

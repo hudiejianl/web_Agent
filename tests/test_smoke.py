@@ -160,6 +160,58 @@ def test_demo_check_runs_core_endpoints(monkeypatch):
     assert calls[1][2]["json"]["session_id"] == "demo"
 
 
+def test_browser_quality_check_uses_dry_run(monkeypatch):
+    from scripts import browser_quality_check
+
+    calls = []
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "query": "武汉 多模态",
+                "trace_id": "trace-browser",
+                "dry_run": True,
+                "quality_report": {
+                    "eligible_candidates": 2,
+                    "rejected_candidates": 1,
+                    "average_profile_quality_score": 0.42,
+                },
+            }
+
+    def fake_request(method, url, timeout=90, **kwargs):
+        calls.append((method, url, kwargs))
+        return FakeResponse()
+
+    monkeypatch.setattr(browser_quality_check.requests, "request", fake_request)
+
+    result = browser_quality_check.run_browser_quality_check("http://server.local/", "武汉 多模态", min_eligible=1, min_average_quality=0.2)
+
+    assert result.ok is True
+    assert result.trace_id == "trace-browser"
+    assert "eligible=2" in result.detail
+    assert calls[0][1] == "http://server.local/api/browser/research"
+    assert calls[0][2]["json"]["dry_run"] is True
+
+
+def test_browser_quality_check_fails_low_quality(monkeypatch):
+    from scripts import browser_quality_check
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"query": "武汉 多模态", "trace_id": "trace-browser", "dry_run": True, "quality_report": {"eligible_candidates": 0, "rejected_candidates": 3, "average_profile_quality_score": 0.05}}
+
+    monkeypatch.setattr(browser_quality_check.requests, "request", lambda *args, **kwargs: FakeResponse())
+
+    with pytest.raises(browser_quality_check.BrowserQualityCheckError):
+        browser_quality_check.run_browser_quality_check("http://server.local/", "武汉 多模态", min_eligible=1, min_average_quality=0.2)
+
+
 def test_health():
     client = TestClient(app)
     response = client.get("/api/health", headers={"X-Request-ID": "test-request-id"})
