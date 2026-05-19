@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime
 from urllib.parse import quote_plus, urlparse
 
@@ -7,7 +8,7 @@ from app.agents.browser_agent import BrowserAgent, BrowserFetchError
 from app.config import get_settings
 from app.agents.query_rewriter import DEFAULT_ALLOWED_DOMAINS, QueryRewriter
 from app.agents.research_agent import ResearchAgent
-from app.models.schemas import AgentTrace, BrowserResearchRequest, BrowserResearchResponse, CandidateLink, TutorProfile
+from app.models.schemas import AgentTrace, BrowserResearchQualityReport, BrowserResearchRequest, BrowserResearchResponse, CandidateLink, TutorProfile
 from app.search.result_filter import ResultFilterConfig, SearchResultFilter
 from app.services.ingestion import IngestionService
 from app.services.seed_sites import UniversitySeedSiteService
@@ -43,8 +44,9 @@ class BrowserResearchService:
         candidates = self._collect_candidates(request, search_urls, rewritten_queries, allowed_domains, trace)
         candidates = self._discover_navigation_candidates(request, candidates, rewritten_queries, allowed_domains, trace)
         tutors = self._browse_and_ingest(request, candidates, trace)
+        quality_report = self._build_quality_report(candidates, len(tutors))
         summary_action = "预检" if request.dry_run else "入库"
-        trace.append(self._trace("Advisor Agent", "summarize_research", "completed", f"筛选 {len(candidates)} 个候选链接，{summary_action} {len(tutors)} 位导师"))
+        trace.append(self._trace("Advisor Agent", "summarize_research", "completed", f"筛选 {quality_report.total_candidates} 个候选链接，合格 {quality_report.eligible_candidates} 个，{summary_action} {len(tutors)} 位导师", {"eligible_candidates": quality_report.eligible_candidates, "average_profile_quality_score": quality_report.average_profile_quality_score}))
         trace_run = self.traces.save(session_id="browser-research", source="browser_research", trace=trace)
         return BrowserResearchResponse(
             query=request.query,
@@ -54,6 +56,7 @@ class BrowserResearchService:
             search_urls=search_urls,
             candidates=candidates,
             tutors=tutors,
+            quality_report=quality_report,
             trace=trace,
         )
 
@@ -231,6 +234,27 @@ class BrowserResearchService:
             if candidate.status == "pending":
                 self._mark_candidate_rejected(candidate, ["未进入本轮入库处理"], "skipped")
         return tutors
+
+    def _build_quality_report(self, candidates: list[CandidateLink], tutor_count: int) -> BrowserResearchQualityReport:
+        total = len(candidates)
+        eligible = sum(1 for candidate in candidates if candidate.ingest_eligible)
+        rejected = total - eligible
+        profile_scores = [candidate.profile_quality_score for candidate in candidates]
+        page_scores = [candidate.page_quality for candidate in candidates]
+        rejection_reasons = Counter(reason for candidate in candidates if not candidate.ingest_eligible for reason in (candidate.quality_reasons or ([candidate.error] if candidate.error else ["未说明"])))
+        top_candidates = sorted(candidates, key=lambda candidate: (candidate.profile_quality_score, candidate.confidence, candidate.score), reverse=True)[:5]
+        return BrowserResearchQualityReport(
+            total_candidates=total,
+            eligible_candidates=eligible,
+            rejected_candidates=rejected,
+            ingested_or_previewed_tutors=tutor_count,
+            average_profile_quality_score=round(sum(profile_scores) / total, 4) if total else 0.0,
+            average_page_quality=round(sum(page_scores) / total, 4) if total else 0.0,
+            status_counts=dict(Counter(candidate.status for candidate in candidates)),
+            link_type_counts=dict(Counter(candidate.link_type for candidate in candidates)),
+            rejection_reasons=dict(rejection_reasons.most_common()),
+            top_candidates=top_candidates,
+        )
 
     def _candidate_precheck_reasons(self, candidate: CandidateLink) -> list[str]:
         url = candidate.url.lower()

@@ -168,7 +168,8 @@ function App() {
             </button>
           </div>
           <SeedSitePreview sites={seedSites} />
-          <pre>{researchResult ? JSON.stringify({ mode: researchResult.dry_run ? '仅预检，不写库' : '搜索并入库', trace_id: researchResult.trace_id, rewritten_queries: researchResult.rewritten_queries, candidates: { total: researchResult.candidates?.length || 0, eligible: researchResult.candidates?.filter((item) => item.ingest_eligible).length || 0 }, tutors: researchResult.tutors?.map((item) => item.name) }, null, 2) : '等待 Browser Research 结果...'}</pre>
+          <QualityReport data={researchResult?.quality_report} dryRun={researchResult?.dry_run} />
+          <pre>{researchResult ? JSON.stringify({ mode: researchResult.dry_run ? '仅预检，不写库' : '搜索并入库', trace_id: researchResult.trace_id, rewritten_queries: researchResult.rewritten_queries, quality_report: researchResult.quality_report, tutors: researchResult.tutors?.map((item) => item.name) }, null, 2) : '等待 Browser Research 结果...'}</pre>
         </section>
       </main>
 
@@ -334,6 +335,27 @@ function SeedSitePreview({ sites }) {
       ))}
     </div>
   )
+}
+
+function QualityReport({ data, dryRun }) {
+  if (!data) return <p className="empty seed-empty">暂无候选质量报告</p>
+  return (
+    <div className="quality-report">
+      <h3>候选质量报告 · {dryRun ? '仅预检' : '入库模式'}</h3>
+      <div className="stats rag-stats">
+        <Stat label="候选总数" value={data.total_candidates} />
+        <Stat label="可入库" value={data.eligible_candidates} />
+        <Stat label="已拒绝" value={data.rejected_candidates} danger={data.rejected_candidates > 0} />
+        <Stat label="平均质量" value={Number(data.average_profile_quality_score || 0).toFixed(2)} />
+      </div>
+      <small>状态分布：{formatCounts(data.status_counts)} · 类型分布：{formatCounts(data.link_type_counts)}</small>
+      <small>主要拒绝原因：{formatCounts(data.rejection_reasons)}</small>
+    </div>
+  )
+}
+
+function formatCounts(value) {
+  return Object.entries(value || {}).map(([key, count]) => `${key}:${count}`).join('、') || '无'
 }
 
 function CandidateView({ items }) {

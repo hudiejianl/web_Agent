@@ -233,11 +233,7 @@
         trace_id: data.trace_id,
         rewritten_queries: data.rewritten_queries,
         search_urls: data.search_urls,
-        candidate_summary: {
-          total: (data.candidates || []).length,
-          eligible: (data.candidates || []).filter(item => item.ingest_eligible).length,
-          rejected: (data.candidates || []).filter(item => !item.ingest_eligible).length
-        },
+        quality_report: data.quality_report,
         tutors: (data.tutors || []).map(t => ({name: t.name, institution: t.institution, homepage: t.homepage, areas: t.research_areas}))
       }, null, 2);
       renderCandidates(data.candidates || []);

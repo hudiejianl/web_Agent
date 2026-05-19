@@ -288,6 +288,19 @@ class BrowserResearchRequest(BaseModel):
     dry_run: bool = False
 
 
+class BrowserResearchQualityReport(BaseModel):
+    total_candidates: int = 0
+    eligible_candidates: int = 0
+    rejected_candidates: int = 0
+    ingested_or_previewed_tutors: int = 0
+    average_profile_quality_score: float = 0.0
+    average_page_quality: float = 0.0
+    status_counts: dict[str, int] = Field(default_factory=dict)
+    link_type_counts: dict[str, int] = Field(default_factory=dict)
+    rejection_reasons: dict[str, int] = Field(default_factory=dict)
+    top_candidates: list[CandidateLink] = Field(default_factory=list)
+
+
 class BrowserResearchResponse(BaseModel):
     query: str
     trace_id: str = ""
@@ -296,6 +309,7 @@ class BrowserResearchResponse(BaseModel):
     search_urls: list[str] = Field(default_factory=list)
     candidates: list[CandidateLink] = Field(default_factory=list)
     tutors: list[TutorProfile] = Field(default_factory=list)
+    quality_report: BrowserResearchQualityReport = Field(default_factory=BrowserResearchQualityReport)
     trace: list[AgentTrace] = Field(default_factory=list)
 
 

@@ -281,6 +281,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 支持候选预检：搜索页、院校导航页、师资列表页、论文页不会被误当作导师个人主页直接入库
 - [x] 支持导师档案质量评分：结合姓名可信度、主页语境、机构/院系、研究方向、邮箱、论文线索和页面质量判断是否可入库
 - [x] 支持 Browser Research dry-run 预检模式：只浏览、结构化和评分候选导师，不写入 SQLite / ChromaDB
+- [x] 支持候选质量报告：统计候选总数、可入库数、拒绝数、平均质量分、状态/类型/拒绝原因分布和最高分候选
 - [x] 两套前端展示候选页面质量、档案质量分、是否可入库和拒绝原因，并提供“仅预检不入库”入口
 - [x] 保持内置 Playwright Browser Agent，不额外引入 Browser Use / Stagehand，避免增加复杂依赖
 
@@ -452,6 +453,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 21. 导师数据质量审计与清理：新增 `scripts/audit_tutor_data.py` 和 `scripts/clean_invalid_tutors.py`，并已清理本地运行库中 8 条无效抓取记录。`[已完成]`
 22. Browser Research 候选预检与质量评分：新增候选入库前预检、导师档案质量分、可入库标记和拒绝原因展示，避免搜索页/列表页/噪声页误入库。`[已完成]`
 23. Browser Research dry-run 预检模式：新增只评分不写库的研究模式，两套前端均可一键预检真实公开页面质量，降低污染导师库风险。`[已完成]`
+24. Browser Research 候选质量报告：API 返回质量统计、拒绝原因分布和最高分候选，React 前端展示质量报告面板。`[已完成]`
 
 原因：
 

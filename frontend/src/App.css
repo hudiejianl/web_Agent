@@ -38,6 +38,9 @@ pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius:
 .seed-sites { margin: 12px 0; }
 .seed-sites h3 { margin: 0 0 8px; }
 .seed-empty { margin: 10px 0; }
+.quality-report { margin: 12px 0; }
+.quality-report h3 { margin: 0 0 8px; }
+.quality-report small { display: block; color: var(--muted); margin-top: 6px; }
 .url-text { word-break: break-all; }
 .field-grid label { color: var(--muted); font-size: 14px; }
 .field-grid input { margin-top: 6px; }

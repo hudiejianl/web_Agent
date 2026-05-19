@@ -841,6 +841,26 @@ def test_browser_research_dry_run_scores_without_ingesting(monkeypatch):
     assert candidate.profile_quality_score >= 0.55
 
 
+def test_browser_research_quality_report_summarizes_candidates():
+    from app.models.schemas import CandidateLink
+    from app.services.browser_research import BrowserResearchService
+
+    eligible = CandidateLink(text="张三", url="https://cs.example.edu.cn/teacher/zhangsan", link_type="profile", status="ingested", page_quality=0.8, profile_quality_score=0.72, confidence=0.9, ingest_eligible=True)
+    rejected = CandidateLink(text="师资队伍", url="https://cs.example.edu.cn/faculty", link_type="faculty_list", status="skipped", quality_reasons=["faculty_list 链接只用于导航发现，不直接入库"])
+
+    report = BrowserResearchService()._build_quality_report([eligible, rejected], tutor_count=1)
+
+    assert report.total_candidates == 2
+    assert report.eligible_candidates == 1
+    assert report.rejected_candidates == 1
+    assert report.ingested_or_previewed_tutors == 1
+    assert report.average_profile_quality_score == 0.36
+    assert report.status_counts == {"ingested": 1, "skipped": 1}
+    assert report.link_type_counts == {"profile": 1, "faculty_list": 1}
+    assert report.rejection_reasons == {"faculty_list 链接只用于导航发现，不直接入库": 1}
+    assert report.top_candidates[0].url == eligible.url
+
+
 def test_browser_research_endpoint(monkeypatch):
     from app.agents.browser_agent import BrowserAgent
     from app.services.browser_research import BrowserResearchService
@@ -899,6 +919,9 @@ def test_browser_research_endpoint(monkeypatch):
     assert payload["trace_id"]
     assert payload["rewritten_queries"]
     assert payload["candidates"]
+    assert payload["quality_report"]["total_candidates"] == len(payload["candidates"])
+    assert payload["quality_report"]["eligible_candidates"] >= 1
+    assert payload["quality_report"]["top_candidates"]
     assert payload["candidates"][0]["confidence"] > 0
     assert "page_quality" in payload["candidates"][0]
     assert payload["tutors"]
