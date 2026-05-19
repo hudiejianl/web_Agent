@@ -481,6 +481,33 @@ def test_browser_browse_endpoint(monkeypatch):
     assert payload["dom"]["headings"][0]["text"] == "Demo"
 
 
+def test_browser_seed_sites_endpoint():
+    client = TestClient(app)
+    response = client.get("/api/browser/seed-sites?q=武汉 多模态")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sites"]
+    assert payload["sites"][0]["score"] > 0
+    assert any("武汉" in item["tags"] for item in payload["sites"])
+
+
+def test_browser_research_uses_seed_sites_when_seed_urls_missing(monkeypatch):
+    from app.models.schemas import BrowserResearchRequest, UniversitySeedSite
+    from app.services.browser_research import BrowserResearchService
+    from app.services.seed_sites import UniversitySeedSiteService
+
+    class FakeSeedSites(UniversitySeedSiteService):
+        def list_sites(self, query: str = "", limit: int = 20):
+            return [UniversitySeedSite(name="示例学院", institution="示例大学", location="武汉", url="https://cs.example.edu.cn/", tags=["武汉"], score=3.0)]
+
+    service = BrowserResearchService(seed_sites=FakeSeedSites())
+    urls = service._build_search_urls(BrowserResearchRequest(query="武汉 多模态 导师", max_search_pages=1), ["site:edu.cn 武汉 多模态 导师"])
+
+    assert "https://cs.example.edu.cn/" in urls
+    assert any("bing.com" in url for url in urls)
+
+
 def test_browser_research_clamps_configured_limits(monkeypatch):
     from app.models.schemas import BrowserResearchRequest
     from app.services.browser_research import BrowserResearchService

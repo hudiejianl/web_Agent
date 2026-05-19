@@ -437,6 +437,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 14. Docker 部署与配置系统完善。`[已完成]`
 15. 系统能力概览接口：`GET /api/system/capabilities`。`[已完成]`
 16. 配置安全上限裁剪：对 Browser Research、RAG chunk、上下文窗口和超时配置做集中保护。`[已完成]`
+17. 高校种子站点库：新增 `data/sample/university_seed_sites.json`、`GET /api/browser/seed-sites`，Browser Research 可自动注入匹配入口。`[已完成]`
 
 原因：
 

@@ -14,13 +14,14 @@ from fastapi.staticfiles import StaticFiles
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
 from app.logging_config import configure_logging
-from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGBenchmarkDatasetSummary, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, SystemCapabilitiesResponse, SystemCapability, TraceRunResponse
+from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGBenchmarkDatasetSummary, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, SystemCapabilitiesResponse, SystemCapability, TraceRunResponse, UniversitySeedSiteResponse
 from app.observability import configure_observability, request_span
 from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
 from app.services.browser_research import BrowserResearchService
 from app.services.chat import ChatService
 from app.services.ingestion import IngestionService, ensure_seed_data
+from app.services.seed_sites import UniversitySeedSiteService
 from app.storage.database import init_database
 from app.storage.repositories import MemoryRepository, PlanRepository, RAGEvaluationRepository, TraceRepository
 
@@ -115,8 +116,8 @@ def system_capabilities() -> SystemCapabilitiesResponse:
             SystemCapability(name="Engineering", features=["Dockerfile", "startup script", "request IDs", "structured errors", "optional OpenTelemetry"]),
         ],
         next_recommended_steps=[
-            "接入真实搜索 API 或高校种子站点库，提升 Browser Research 稳定性",
-            "扩充真实导师 benchmark 数据，形成更有说服力的评估报告",
+            "继续扩充高校种子站点库和真实导师 benchmark 数据",
+            "可选接入官方搜索 API，替换直接搜索结果页解析",
             "部署到可访问环境并录制端到端演示流程",
         ],
     )
@@ -143,6 +144,11 @@ def browser_research(request: BrowserResearchRequest) -> BrowserResearchResponse
     if not settings.enable_browser_research:
         raise HTTPException(status_code=403, detail="Browser research is disabled by configuration")
     return BrowserResearchService().research(request)
+
+
+@app.get("/api/browser/seed-sites", response_model=UniversitySeedSiteResponse)
+def browser_seed_sites(q: str = "", limit: int = 20) -> UniversitySeedSiteResponse:
+    return UniversitySeedSiteResponse(sites=UniversitySeedSiteService().list_sites(query=q, limit=limit))
 
 
 @app.get("/api/tutors/search", response_model=SearchResponse)

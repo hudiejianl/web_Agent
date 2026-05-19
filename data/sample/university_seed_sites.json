@@ -1,0 +1,30 @@
+[
+  {
+    "name": "华中科技大学计算机科学与技术学院",
+    "institution": "华中科技大学",
+    "location": "武汉",
+    "url": "https://cs.hust.edu.cn/",
+    "tags": ["武汉", "计算机学院", "人工智能", "多模态", "师资"]
+  },
+  {
+    "name": "上海交通大学电子信息与电气工程学院",
+    "institution": "上海交通大学",
+    "location": "上海",
+    "url": "https://www.seiee.sjtu.edu.cn/",
+    "tags": ["上海", "电子信息", "人工智能", "大模型", "导师"]
+  },
+  {
+    "name": "浙江大学计算机科学与技术学院",
+    "institution": "浙江大学",
+    "location": "杭州",
+    "url": "http://www.cs.zju.edu.cn/",
+    "tags": ["杭州", "计算机学院", "人工智能", "医学影像", "机器学习"]
+  },
+  {
+    "name": "南京大学软件学院",
+    "institution": "南京大学",
+    "location": "南京",
+    "url": "https://software.nju.edu.cn/",
+    "tags": ["南京", "软件工程", "代码智能", "程序分析", "教师"]
+  }
+]

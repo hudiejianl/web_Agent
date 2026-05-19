@@ -10,6 +10,7 @@ from app.agents.research_agent import ResearchAgent
 from app.models.schemas import AgentTrace, BrowserResearchRequest, BrowserResearchResponse, CandidateLink, TutorProfile
 from app.search.result_filter import ResultFilterConfig, SearchResultFilter
 from app.services.ingestion import IngestionService
+from app.services.seed_sites import UniversitySeedSiteService
 from app.storage.repositories import TraceRepository
 
 
@@ -21,11 +22,13 @@ class BrowserResearchService:
         researcher: ResearchAgent | None = None,
         ingestion: IngestionService | None = None,
         query_rewriter: QueryRewriter | None = None,
+        seed_sites: UniversitySeedSiteService | None = None,
     ):
         self.browser = browser or BrowserAgent()
         self.researcher = researcher or ResearchAgent()
         self.ingestion = ingestion or IngestionService()
         self.query_rewriter = query_rewriter or QueryRewriter()
+        self.seed_sites = seed_sites or UniversitySeedSiteService()
         self.traces = TraceRepository()
 
     def research(self, request: BrowserResearchRequest) -> BrowserResearchResponse:
@@ -65,6 +68,8 @@ class BrowserResearchService:
 
     def _build_search_urls(self, request: BrowserResearchRequest, rewritten_queries: list[str]) -> list[str]:
         urls = [str(url) for url in request.seed_urls]
+        if not urls:
+            urls.extend(self.seed_sites.seed_urls_for_query(request.query, limit=request.max_search_pages))
         pages = max(1, min(request.max_search_pages, 3))
         queries = rewritten_queries or [request.query]
         for query_text in queries:

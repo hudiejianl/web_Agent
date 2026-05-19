@@ -294,6 +294,19 @@ class BrowserResearchResponse(BaseModel):
     trace: list[AgentTrace] = Field(default_factory=list)
 
 
+class UniversitySeedSite(BaseModel):
+    name: str
+    institution: str
+    location: str
+    url: str
+    tags: list[str] = Field(default_factory=list)
+    score: float = 0.0
+
+
+class UniversitySeedSiteResponse(BaseModel):
+    sites: list[UniversitySeedSite] = Field(default_factory=list)
+
+
 class SearchResponse(BaseModel):
     tutors: list[TutorProfile]
 
