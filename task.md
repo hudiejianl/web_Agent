@@ -430,11 +430,12 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 ### 第三阶段：工程化与科研味
 
-10. Agent Trace 持久化与可视化，后续接 LangSmith / OpenTelemetry。
-11. RAG Evaluation：Recall、Precision、Faithfulness、Relevance。
-12. Benchmark Dataset：自建导师推荐测试集。
-13. React / Next.js 前端与 Workflow UI。
-14. Docker 部署与配置系统完善。
+10. Agent Trace 持久化与可视化，后续接 LangSmith / OpenTelemetry。`[已完成]`
+11. RAG Evaluation：Recall、Precision、Faithfulness、Relevance。`[已完成]`
+12. Benchmark Dataset：自建导师推荐测试集。`[已完成]`
+13. React / Next.js 前端与 Workflow UI。`[已完成：React / Vite]`
+14. Docker 部署与配置系统完善。`[已完成]`
+15. 系统能力概览接口：`GET /api/system/capabilities`。`[已完成]`
 
 原因：
 

@@ -78,6 +78,19 @@ def test_index_serves_workflow_ui():
     assert "escapeHtml" in response.text
 
 
+def test_system_capabilities_endpoint():
+    client = TestClient(app)
+    response = client.get("/api/system/capabilities")
+
+    assert response.status_code == 200
+    payload = response.json()
+    names = {item["name"] for item in payload["capabilities"]}
+    assert "Multi-Agent Workflow" in names
+    assert "RAG Retrieval" in names
+    assert "Browser Research" in names
+    assert payload["next_recommended_steps"]
+
+
 def test_chat_returns_tutor_recommendations():
     client = TestClient(app)
     response = client.post(

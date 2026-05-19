@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
 from app.logging_config import configure_logging
-from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGBenchmarkDatasetSummary, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, TraceRunResponse
+from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGBenchmarkDatasetSummary, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, SystemCapabilitiesResponse, SystemCapability, TraceRunResponse
 from app.observability import configure_observability, request_span
 from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
@@ -99,6 +99,27 @@ def index() -> FileResponse:
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "app": settings.app_name}
+
+
+@app.get("/api/system/capabilities", response_model=SystemCapabilitiesResponse)
+def system_capabilities() -> SystemCapabilitiesResponse:
+    return SystemCapabilitiesResponse(
+        app_name=settings.app_name,
+        capabilities=[
+            SystemCapability(name="Multi-Agent Workflow", features=["LangGraph workflow", "structured planning", "agent handoffs", "persistent plans and traces"]),
+            SystemCapability(name="RAG Retrieval", features=["dense retrieval", "BM25", "hybrid retrieval", "reranker", "chunking", "highlighted evidence"]),
+            SystemCapability(name="Memory", features=["episodic memory", "semantic memory", "procedural memory", "memory retrieval", "reflection", "conflict resolution", "context compression"]),
+            SystemCapability(name="Browser Research", features=["query rewriting", "search filtering", "Playwright browsing", "deep navigation", "candidate confidence", "profile ingestion"]),
+            SystemCapability(name="Evaluation", features=["benchmark dataset", "recall", "precision", "relevance", "faithfulness", "configuration comparison", "saved evaluation runs"]),
+            SystemCapability(name="Frontend", features=["built-in workflow UI", "React/Vite workflow frontend", "Plan/Trace/Evidence/Memory/Handoff visualization"]),
+            SystemCapability(name="Engineering", features=["Dockerfile", "startup script", "request IDs", "structured errors", "optional OpenTelemetry"]),
+        ],
+        next_recommended_steps=[
+            "接入真实搜索 API 或高校种子站点库，提升 Browser Research 稳定性",
+            "扩充真实导师 benchmark 数据，形成更有说服力的评估报告",
+            "部署到可访问环境并录制端到端演示流程",
+        ],
+    )
 
 
 @app.post("/api/chat", response_model=ChatResponse)

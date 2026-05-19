@@ -298,6 +298,18 @@ class SearchResponse(BaseModel):
     tutors: list[TutorProfile]
 
 
+class SystemCapability(BaseModel):
+    name: str
+    status: Literal["completed", "partial", "planned"] = "completed"
+    features: list[str] = Field(default_factory=list)
+
+
+class SystemCapabilitiesResponse(BaseModel):
+    app_name: str
+    capabilities: list[SystemCapability] = Field(default_factory=list)
+    next_recommended_steps: list[str] = Field(default_factory=list)
+
+
 class TraceRunResponse(BaseModel):
     runs: list[AgentTraceRun] = Field(default_factory=list)
 
