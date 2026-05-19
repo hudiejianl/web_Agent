@@ -4,7 +4,7 @@
 
 项目已完成一个可运行的 MVP：具备 FastAPI 后端、LangGraph 多智能体工作流、RAG 检索、ChromaDB 本地向量库、SQLite 存储、网页采集、长期记忆、Agent Trace 和本地演示页面。
 
-当前系统更准确地说是：**Agent / RAG / Memory / Trace 的工程骨架已经跑通，并已支持可选 LLM 调用、Playwright 动态浏览和 Autonomous Browser Research；研究级检索、评估系统和高级长期记忆仍需增强**。
+当前系统更准确地说是：**Agent / RAG / Memory / Trace 的工程骨架已经跑通，并已支持可选 LLM 调用、Playwright 动态浏览、Autonomous Browser Research、研究级检索、评估系统、高级长期记忆、工程化可观察性和前端工作流展示**。
 
 ---
 
@@ -237,11 +237,11 @@
 
 - [x] Planner 输出更严格的结构化任务计划
 - [x] 每个计划步骤有输入、输出、依赖关系
-- [ ] 支持步骤状态持久化
+- [x] 支持步骤状态持久化
 - [x] 支持复杂任务自动拆解
 - [x] 支持 Browser / Research / Retriever / Advisor 多轮协作
 - [x] 支持任务失败原因记录与重试策略
-- [ ] 支持用户在中途补充约束后重新规划
+- [x] 支持用户在中途补充约束后重新规划
 
 示例目标任务：
 
@@ -278,7 +278,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 支持配置导航深度和最多导航页面数
 - [x] 新增 `/api/browser/research` 自动研究接口
 - [x] 前端支持自动搜索、候选链接、入库导师和研究 Trace 展示
-- [ ] 可选调研 Browser Use / Stagehand 集成
+- [x] 保持内置 Playwright Browser Agent，不额外引入 Browser Use / Stagehand，避免增加复杂依赖
 
 当前限制：
 
