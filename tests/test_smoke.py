@@ -743,9 +743,71 @@ def test_browser_research_rejects_search_page_profiles(monkeypatch):
 
     assert tutors == []
     assert ingested == []
-    assert candidate.status == "failed"
+    assert candidate.status == "skipped"
+    assert candidate.ingest_eligible is False
+    assert candidate.profile_quality_score == 0
     assert "搜索结果页" in candidate.error
+    assert "搜索结果页" in candidate.quality_reasons[0]
 
+
+def test_browser_research_precheck_skips_navigation_links(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+    from app.models.schemas import BrowserResearchRequest, CandidateLink
+    from app.services.browser_research import BrowserResearchService
+
+    fetched = []
+
+    def fake_fetch(self, url, use_playwright=False, actions=None):
+        fetched.append(url)
+        return {"url": url, "title": "师资队伍", "text": "教师队伍", "links": []}
+
+    monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
+
+    service = BrowserResearchService()
+    candidate = CandidateLink(text="师资队伍", url="https://cs.example.edu.cn/faculty", score=8.0, link_type="faculty_list")
+    tutors = service._browse_and_ingest(BrowserResearchRequest(query="人工智能 导师"), [candidate], [])
+
+    assert tutors == []
+    assert fetched == []
+    assert candidate.status == "skipped"
+    assert candidate.ingest_eligible is False
+    assert "只用于导航发现" in candidate.error
+
+
+def test_browser_research_scores_valid_profile_for_ingest(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+    from app.models.schemas import BrowserResearchRequest, CandidateLink
+    from app.services.browser_research import BrowserResearchService
+    from app.services.ingestion import IngestionService
+
+    ingested = []
+
+    def fake_fetch(self, url, use_playwright=False, actions=None):
+        return {
+            "url": url,
+            "title": "张三 教授 - 示例大学计算机学院",
+            "text": "张三 教授 示例大学 计算机学院 个人主页 教师简介 研究方向 人工智能 多模态 招生 代表论文 zhangsan@example.edu.cn " * 8,
+            "links": [{"text": "代表论文", "url": "https://cs.example.edu.cn/teacher/zhangsan/papers"}],
+        }
+
+    def fake_ingest_profile(self, profile):
+        profile.id = "valid-profile"
+        ingested.append(profile)
+        return profile
+
+    monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
+    monkeypatch.setattr(IngestionService, "ingest_profile", fake_ingest_profile)
+
+    service = BrowserResearchService()
+    candidate = CandidateLink(text="张三 教授 个人主页", url="https://cs.example.edu.cn/teacher/zhangsan", score=9.0, link_type="profile")
+    tutors = service._browse_and_ingest(BrowserResearchRequest(query="人工智能 多模态 导师"), [candidate], [])
+
+    assert [tutor.id for tutor in tutors] == ["valid-profile"]
+    assert len(ingested) == 1
+    assert candidate.status == "ingested"
+    assert candidate.ingest_eligible is True
+    assert candidate.profile_quality_score >= 0.55
+    assert "识别到研究方向" in candidate.quality_reasons
 
 
 def test_browser_research_endpoint(monkeypatch):

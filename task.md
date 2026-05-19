@@ -4,7 +4,7 @@
 
 项目已完成一个可运行的 MVP：具备 FastAPI 后端、LangGraph 多智能体工作流、RAG 检索、ChromaDB 本地向量库、SQLite 存储、网页采集、长期记忆、Agent Trace 和本地演示页面。
 
-当前系统更准确地说是：**Agent / RAG / Memory / Trace 的工程骨架已经跑通，并已支持可选 LLM 调用、Playwright 动态浏览、Autonomous Browser Research、研究级检索、评估系统、高级长期记忆、工程化可观察性和前端工作流展示**。
+当前系统更准确地说是：**Agent / RAG / Memory / Trace 的工程骨架已经跑通，并已支持可选 LLM 调用、Playwright 动态浏览、Autonomous Browser Research、候选质量评分、研究级检索、评估系统、高级长期记忆、工程化可观察性和前端工作流展示**。
 
 ---
 
@@ -278,6 +278,9 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 支持配置导航深度和最多导航页面数
 - [x] 新增 `/api/browser/research` 自动研究接口
 - [x] 前端支持自动搜索、候选链接、入库导师和研究 Trace 展示
+- [x] 支持候选预检：搜索页、院校导航页、师资列表页、论文页不会被误当作导师个人主页直接入库
+- [x] 支持导师档案质量评分：结合姓名可信度、主页语境、机构/院系、研究方向、邮箱、论文线索和页面质量判断是否可入库
+- [x] 两套前端展示候选页面质量、档案质量分、是否可入库和拒绝原因
 - [x] 保持内置 Playwright Browser Agent，不额外引入 Browser Use / Stagehand，避免增加复杂依赖
 
 当前限制：
@@ -446,6 +449,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 19. React RAG Evaluation 面板：展示 benchmark 数据集摘要、baseline / hybrid / reranker 策略对比和 chunk 配置对比。`[已完成]`
 20. 端到端演示检查脚本：新增 `scripts/demo_check.py`，可对运行中的 FastAPI 服务执行 health、chat、seed-sites、RAG dataset 和 RAG compare 检查。`[已完成]`
 21. 导师数据质量审计与清理：新增 `scripts/audit_tutor_data.py` 和 `scripts/clean_invalid_tutors.py`，并已清理本地运行库中 8 条无效抓取记录。`[已完成]`
+22. Browser Research 候选预检与质量评分：新增候选入库前预检、导师档案质量分、可入库标记和拒绝原因展示，避免搜索页/列表页/噪声页误入库。`[已完成]`
 
 原因：
 

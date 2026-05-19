@@ -69,6 +69,9 @@ pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius:
 .row:last-child { border-bottom: 0; }
 .row p { margin: 4px 0; color: var(--muted); }
 .row small, .card small { color: var(--muted); }
+.candidate-row small { display: block; margin-top: 4px; }
+.quality-pass { color: var(--green); }
+.quality-reject { color: var(--danger); }
 .card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 10px 0; }
 .card p { margin: 6px 0; color: var(--muted); }
 .capability-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }

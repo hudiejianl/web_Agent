@@ -263,6 +263,9 @@ class CandidateLink(BaseModel):
     score: float = 0.0
     page_quality: float = 0.0
     confidence: float = 0.0
+    profile_quality_score: float = 0.0
+    ingest_eligible: bool = False
+    quality_reasons: list[str] = Field(default_factory=list)
     reason: str = ""
     link_type: str = "candidate"
     depth: int = 0

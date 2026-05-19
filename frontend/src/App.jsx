@@ -334,7 +334,22 @@ function SeedSitePreview({ sites }) {
 
 function CandidateView({ items }) {
   if (!items.length) return <Empty text="暂无候选链路" />
-  return items.map((item) => <article className="row" key={item.url}><Badge value={item.link_type || item.status} /><div><strong>{item.text || item.url}</strong><p>{item.url}</p><small>depth {item.depth} · confidence {item.confidence} · {item.reason}</small></div></article>)
+  return items.map((item) => {
+    const reasons = item.quality_reasons?.length ? item.quality_reasons.join('、') : item.error || '暂无质量说明'
+    return (
+      <article className="row candidate-row" key={item.url}>
+        <Badge value={item.status || item.link_type} />
+        <div>
+          <strong>{item.text || item.url}</strong>
+          <p className="url-text">{item.url}</p>
+          <small>类型 {item.link_type} · depth {item.depth} · confidence {item.confidence} · 链接分 {item.score}</small>
+          <small>页面质量 {item.page_quality} · 档案质量 {item.profile_quality_score} · 可入库 {item.ingest_eligible ? '是' : '否'}</small>
+          <small>来源原因：{item.reason || '无'}</small>
+          <small className={item.ingest_eligible ? 'quality-pass' : 'quality-reject'}>质量说明：{reasons}</small>
+        </div>
+      </article>
+    )
+  })
 }
 
 function HandoffView({ items }) {

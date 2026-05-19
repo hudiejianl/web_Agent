@@ -296,15 +296,20 @@
     }
 
     function renderCandidates(items) {
-      document.getElementById('candidates').innerHTML = items.map(item => `
-        <div class="card candidate">
-          <strong>${escapeHtml(item.text || item.url)}</strong> ${badge(item.status)}<br />
-          <span class="muted">类型：${escapeHtml(item.link_type || 'candidate')} · 深度：${escapeHtml(item.depth ?? 0)} · 置信度：${escapeHtml(item.confidence ?? 0)} · 分数：${escapeHtml(item.score ?? 0)}</span><br />
-          <span class="muted">原因：${escapeHtml(item.reason || '无')}</span><br />
-          <span>${escapeHtml(item.url)}</span>
-          ${item.error ? `<br /><span class="danger">错误：${escapeHtml(item.error)}</span>` : ''}
-        </div>
-      `).join('') || '<p class="muted">暂无候选链路</p>';
+      document.getElementById('candidates').innerHTML = items.map(item => {
+        const qualityReasons = (item.quality_reasons || []).join('、') || (item.error || '暂无');
+        return `
+          <div class="card candidate">
+            <strong>${escapeHtml(item.text || item.url)}</strong> ${badge(item.status)}<br />
+            <span class="muted">类型：${escapeHtml(item.link_type || 'candidate')} · 深度：${escapeHtml(item.depth ?? 0)} · 置信度：${escapeHtml(item.confidence ?? 0)} · 链接分：${escapeHtml(item.score ?? 0)}</span><br />
+            <span class="muted">页面质量：${escapeHtml(item.page_quality ?? 0)} · 档案质量：${escapeHtml(item.profile_quality_score ?? 0)} · 可入库：${item.ingest_eligible ? '是' : '否'}</span><br />
+            <span class="muted">来源原因：${escapeHtml(item.reason || '无')}</span><br />
+            <span class="muted">质量说明：${escapeHtml(qualityReasons)}</span><br />
+            <span>${escapeHtml(item.url)}</span>
+            ${item.error ? `<br /><span class="danger">拒绝原因：${escapeHtml(item.error)}</span>` : ''}
+          </div>
+        `;
+      }).join('') || '<p class="muted">暂无候选链路</p>';
     }
 
     function renderHandoffs(items) {
