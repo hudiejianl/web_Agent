@@ -203,6 +203,7 @@
         <div class="card candidate">
           <strong>${escapeHtml(site.name)}</strong> <span class="badge">${escapeHtml(site.score)}</span><br />
           <span class="muted">${escapeHtml(site.location)} · ${escapeHtml(site.institution)} · ${escapeHtml((site.tags || []).join('、'))}</span><br />
+          <span class="muted">原因：${escapeHtml(site.reason || '默认高校入口')} · 匹配词：${escapeHtml((site.matched_terms || []).join('、') || '无')}</span><br />
           <span>${escapeHtml(site.url)}</span>
         </div>
       `).join('') || '<p class="muted">未匹配到高校入口</p>';

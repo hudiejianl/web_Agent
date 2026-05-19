@@ -397,6 +397,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 增加 Dockerfile 和启动脚本。
    - [x] 增强内置前端工作流 UI：展示 Plan / Trace / Evidence / Memory、Browser Research 深链路候选和导航参数。
    - [x] 增加独立 React / Vite 前端工程，可连接 FastAPI API 展示工作流 UI。
+   - [x] 两套前端均支持预览高校种子入口、匹配原因和匹配词。
    - [x] 可选接入 LangSmith 或 OpenTelemetry。
 
 ---
@@ -438,6 +439,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 15. 系统能力概览接口：`GET /api/system/capabilities`。`[已完成]`
 16. 配置安全上限裁剪：对 Browser Research、RAG chunk、上下文窗口和超时配置做集中保护。`[已完成]`
 17. 高校种子站点库：新增 `data/sample/university_seed_sites.json`、`GET /api/browser/seed-sites`，Browser Research 可自动注入匹配入口。`[已完成]`
+18. 高校入口匹配解释：种子库扩展到 16 个高校/学院入口，并在 API 与两套前端展示匹配词和匹配原因。`[已完成]`
 
 原因：
 

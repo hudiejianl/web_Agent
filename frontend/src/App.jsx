@@ -239,6 +239,7 @@ function SeedSitePreview({ sites }) {
           <strong>{site.name}</strong>
           <p>{site.location} · {site.institution}</p>
           <small>score {site.score} · {site.tags?.join('、') || '无标签'}</small>
+          <p>{site.reason || '默认高校入口'} · 匹配词：{site.matched_terms?.join('、') || '无'}</p>
           <p className="url-text">{site.url}</p>
         </article>
       ))}

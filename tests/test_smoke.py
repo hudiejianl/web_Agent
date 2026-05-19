@@ -491,7 +491,21 @@ def test_browser_seed_sites_endpoint():
     payload = response.json()
     assert payload["sites"]
     assert payload["sites"][0]["score"] > 0
+    assert "武汉" in payload["sites"][0]["matched_terms"]
+    assert payload["sites"][0]["reason"]
     assert any("武汉" in item["tags"] for item in payload["sites"])
+
+
+def test_browser_seed_sites_ranks_institution_and_research_terms():
+    client = TestClient(app)
+    response = client.get("/api/browser/seed-sites?q=浙江大学 医学影像 人工智能")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sites"]
+    assert payload["sites"][0]["institution"] == "浙江大学"
+    assert "医学影像" in payload["sites"][0]["matched_terms"]
+    assert "浙江大学" in payload["sites"][0]["reason"]
 
 
 def test_browser_research_uses_seed_sites_when_seed_urls_missing(monkeypatch):

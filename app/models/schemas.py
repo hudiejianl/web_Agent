@@ -301,6 +301,8 @@ class UniversitySeedSite(BaseModel):
     url: str
     tags: list[str] = Field(default_factory=list)
     score: float = 0.0
+    matched_terms: list[str] = Field(default_factory=list)
+    reason: str = ""
 
 
 class UniversitySeedSiteResponse(BaseModel):

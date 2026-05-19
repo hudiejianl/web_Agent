@@ -12,8 +12,11 @@ class UniversitySeedSiteService:
 
     def list_sites(self, query: str = "", limit: int = 20) -> list[UniversitySeedSite]:
         sites = self._load_sites()
-        scored = [site.model_copy(update={"score": self._score(site, query)}) for site in sites]
-        ranked = sorted(scored, key=lambda item: item.score, reverse=True)
+        scored = []
+        for site in sites:
+            score, matched_terms = self._score(site, query)
+            scored.append(site.model_copy(update={"score": score, "matched_terms": matched_terms, "reason": self._reason(site, matched_terms)}))
+        ranked = sorted(scored, key=lambda item: (item.score, len(item.tags)), reverse=True)
         if query:
             ranked = [site for site in ranked if site.score > 0]
         return ranked[: max(1, min(limit, 50))]
@@ -27,12 +30,23 @@ class UniversitySeedSiteService:
             payload = json.load(file)
         return [UniversitySeedSite.model_validate(item) for item in payload]
 
-    def _score(self, site: UniversitySeedSite, query: str) -> float:
+    def _score(self, site: UniversitySeedSite, query: str) -> tuple[float, list[str]]:
         if not query:
-            return 1.0
-        text = " ".join([site.name, site.institution, site.location, *site.tags]).lower()
-        terms = [term.strip().lower() for term in query.replace("，", " ").replace("、", " ").split() if term.strip()]
-        score = sum(1.0 for term in terms if term in text)
-        if site.location and site.location.lower() in query.lower():
+            return 1.0, []
+        searchable = " ".join([site.name, site.institution, site.location, *site.tags]).lower()
+        query_text = query.lower().replace("，", " ").replace("、", " ")
+        terms = [term.strip() for term in query_text.split() if term.strip()]
+        matched_terms = list(dict.fromkeys(term for term in terms if term in searchable))
+        score = float(len(matched_terms))
+        if site.location and site.location.lower() in query_text:
             score += 2.0
-        return score
+        if site.institution and site.institution.lower() in query_text:
+            score += 2.0
+        if any(tag.lower() in query_text for tag in site.tags):
+            score += 0.5
+        return score, matched_terms
+
+    def _reason(self, site: UniversitySeedSite, matched_terms: list[str]) -> str:
+        if not matched_terms:
+            return "默认高校入口"
+        return f"匹配 {site.location} / {site.institution} / {'、'.join(matched_terms)}"
