@@ -319,6 +319,15 @@ class RAGEvaluationCase(BaseModel):
     relevant_terms: list[str] = Field(default_factory=list)
 
 
+class RAGBenchmarkDatasetSummary(BaseModel):
+    case_count: int
+    expected_tutor_count: int
+    unique_expected_tutors: list[str] = Field(default_factory=list)
+    covered_locations: list[str] = Field(default_factory=list)
+    covered_research_terms: list[str] = Field(default_factory=list)
+    cases: list[RAGEvaluationCase] = Field(default_factory=list)
+
+
 class RAGEvaluationCaseResult(BaseModel):
     case_id: str
     query: str

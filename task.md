@@ -317,6 +317,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 - [x] 构建 evaluation dataset 第一版
 - [x] 设计导师推荐测试问题集第一版
+- [x] 增强 Benchmark Dataset 覆盖度，并新增 `/api/eval/rag/dataset` 数据集摘要接口
 - [x] 评估 Recall
 - [x] 评估 Precision
 - [x] 评估 Relevance

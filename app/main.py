@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
 from app.logging_config import configure_logging
-from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, TraceRunResponse
+from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGBenchmarkDatasetSummary, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, TraceRunResponse
 from app.observability import configure_observability, request_span
 from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
@@ -163,6 +163,13 @@ def compare_rag_configurations(limit: int = 5) -> RAGConfigurationComparisonResp
     result = RAGEvaluator().compare_configurations(limit=limit)
     RAGEvaluationRepository().save("configurations", result)
     return result
+
+
+@app.get("/api/eval/rag/dataset", response_model=RAGBenchmarkDatasetSummary)
+def get_rag_benchmark_dataset() -> RAGBenchmarkDatasetSummary:
+    if not settings.enable_rag_eval:
+        raise HTTPException(status_code=403, detail="RAG evaluation is disabled by configuration")
+    return RAGEvaluator().dataset_summary()
 
 
 @app.get("/api/eval/rag/runs", response_model=RAGEvaluationRunResponse)

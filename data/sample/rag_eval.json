@@ -16,5 +16,23 @@
     "query": "南京软件工程和代码智能方向导师",
     "expected_tutor_names": ["王启航"],
     "relevant_terms": ["南京", "软件工程", "代码智能", "程序分析"]
+  },
+  {
+    "id": "llm-retrieval-acl",
+    "query": "想找大语言模型、信息检索和 ACL 论文方向导师",
+    "expected_tutor_names": ["李若水"],
+    "relevant_terms": ["大语言模型", "信息检索", "ACL", "RAG", "智能体"]
+  },
+  {
+    "id": "multimodal-medical-miccai",
+    "query": "希望申请跨模态学习、智能医疗和 MICCAI 论文相关导师",
+    "expected_tutor_names": ["陈明"],
+    "relevant_terms": ["跨模态学习", "智能医疗", "医学影像", "MICCAI", "深度学习"]
+  },
+  {
+    "id": "code-agent-software-quality",
+    "query": "我有工程项目经验，想做代码智能、软件质量和 Code Agent 评估",
+    "expected_tutor_names": ["王启航"],
+    "relevant_terms": ["代码智能", "软件质量", "Code Agents", "软件工程", "FSE"]
   }
 ]

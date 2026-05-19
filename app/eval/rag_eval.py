@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from app.config import get_settings
-from app.models.schemas import RAGConfigSnapshot, RAGConfigurationComparisonResponse, RAGEvaluationCase, RAGEvaluationCaseResult, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, TutorProfile
+from app.models.schemas import RAGBenchmarkDatasetSummary, RAGConfigSnapshot, RAGConfigurationComparisonResponse, RAGEvaluationCase, RAGEvaluationCaseResult, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, TutorProfile
 from app.rag.retriever import TutorRetriever
 from app.services.ingestion import ensure_seed_data
 from app.storage.database import init_database
@@ -38,6 +38,19 @@ class RAGEvaluator:
     def report(self, limit: int = 5) -> RAGEvaluationReportResponse:
         comparison = self.compare(limit=limit)
         return RAGEvaluationReportResponse(markdown=self._render_markdown_report(comparison), comparison=comparison)
+
+    def dataset_summary(self) -> RAGBenchmarkDatasetSummary:
+        cases = self.load_cases()
+        expected_tutors = [name for case in cases for name in case.expected_tutor_names]
+        terms = [term for case in cases for term in case.relevant_terms]
+        return RAGBenchmarkDatasetSummary(
+            case_count=len(cases),
+            expected_tutor_count=len(expected_tutors),
+            unique_expected_tutors=sorted(dict.fromkeys(expected_tutors)),
+            covered_locations=self._covered_terms(terms, ["北京", "上海", "杭州", "南京", "武汉", "江浙沪"]),
+            covered_research_terms=self._covered_research_terms(terms),
+            cases=cases,
+        )
 
     def compare_configurations(self, limit: int = 5) -> RAGConfigurationComparisonResponse:
         evaluations = [
@@ -174,6 +187,13 @@ class RAGEvaluator:
 
     def _best_strategy(self, comparison: RAGEvaluationComparisonResponse, metric: str) -> RAGEvaluationResponse | None:
         return max(comparison.strategies, key=lambda result: getattr(result, metric), default=None)
+
+    def _covered_terms(self, terms: list[str], vocabulary: list[str]) -> list[str]:
+        return [term for term in vocabulary if term in terms]
+
+    def _covered_research_terms(self, terms: list[str]) -> list[str]:
+        location_terms = {"北京", "上海", "杭州", "南京", "武汉", "江浙沪"}
+        return sorted(dict.fromkeys(term for term in terms if term not in location_terms))
 
     def _average(self, values: list[float]) -> float:
         return round(sum(values) / len(values), 4) if values else 0.0

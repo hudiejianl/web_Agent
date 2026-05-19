@@ -343,6 +343,14 @@ def test_rag_evaluation_endpoint():
     assert configurations_payload["configurations"]
     assert all(item["config"] for item in configurations_payload["configurations"])
 
+    dataset_response = client.get("/api/eval/rag/dataset")
+    assert dataset_response.status_code == 200
+    dataset_payload = dataset_response.json()
+    assert dataset_payload["case_count"] >= 3
+    assert "李若水" in dataset_payload["unique_expected_tutors"]
+    assert "上海" in dataset_payload["covered_locations"]
+    assert "RAG" in dataset_payload["covered_research_terms"]
+
 
 def test_api_errors_have_consistent_shape():
     client = TestClient(app)
