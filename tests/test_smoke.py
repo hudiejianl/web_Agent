@@ -10,6 +10,34 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
+def test_settings_clamp_risky_limits(monkeypatch):
+    from app.config import Settings
+
+    settings = Settings(
+        max_browser_search_pages=99,
+        max_browser_candidates=999,
+        max_browser_ingest=999,
+        max_browser_navigation_pages=999,
+        browser_fetch_retries=0,
+        rag_chunk_size=1,
+        rag_chunk_overlap=9999,
+        max_context_messages=1,
+        summary_trigger_messages=999,
+        request_timeout_seconds=0,
+    )
+
+    assert settings.max_browser_search_pages == 5
+    assert settings.max_browser_candidates == 50
+    assert settings.max_browser_ingest == 20
+    assert settings.max_browser_navigation_pages == 50
+    assert settings.browser_fetch_retries == 1
+    assert settings.rag_chunk_size == 100
+    assert settings.rag_chunk_overlap == 1000
+    assert settings.max_context_messages == 2
+    assert settings.summary_trigger_messages == 100
+    assert settings.request_timeout_seconds == 1
+
+
 def test_observability_is_optional(monkeypatch):
     from app import observability
 

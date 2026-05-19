@@ -436,6 +436,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 13. React / Next.js 前端与 Workflow UI。`[已完成：React / Vite]`
 14. Docker 部署与配置系统完善。`[已完成]`
 15. 系统能力概览接口：`GET /api/system/capabilities`。`[已完成]`
+16. 配置安全上限裁剪：对 Browser Research、RAG chunk、上下文窗口和超时配置做集中保护。`[已完成]`
 
 原因：
 
