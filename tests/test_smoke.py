@@ -170,6 +170,60 @@ def test_ingest_url_accepts_quality_profile(monkeypatch):
     assert saved[0].homepage == "https://cs.example.edu.cn/teacher/zhangsan"
 
 
+def test_ingest_url_preview_does_not_index(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+    from app.models.schemas import TutorProfile
+    from app.services.ingestion import IngestionService
+
+    class FakeRepository:
+        def upsert(self, profile: TutorProfile) -> TutorProfile:
+            raise AssertionError("preview_url must not write profiles")
+
+    class FakeVectorStore:
+        def upsert_tutor(self, profile: TutorProfile) -> None:
+            raise AssertionError("preview_url must not index profiles")
+
+    def fake_fetch(self, url, use_playwright=False, actions=None):
+        return {
+            "url": url,
+            "title": "张三 教授 - 示例大学计算机学院",
+            "text": "张三 教授 示例大学 计算机学院 个人主页 教师简介 研究方向 人工智能 多模态 招生 代表论文 zhangsan@example.edu.cn " * 8,
+            "links": [],
+        }
+
+    monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
+
+    preview = IngestionService(repository=FakeRepository(), vector_store=FakeVectorStore()).preview_url("https://cs.example.edu.cn/teacher/zhangsan")
+
+    assert preview.indexed is False
+    assert preview.ingest_eligible is True
+    assert preview.profile_quality_score >= 0.55
+    assert preview.tutor.name == "张三"
+
+
+def test_ingest_url_preview_endpoint(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+
+    def fake_fetch(self, url, use_playwright=False, actions=None):
+        return {
+            "url": url,
+            "title": "张三 教授 - 示例大学计算机学院",
+            "text": "张三 教授 示例大学 计算机学院 个人主页 教师简介 研究方向 人工智能 多模态 招生 代表论文 zhangsan@example.edu.cn " * 8,
+            "links": [],
+        }
+
+    monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
+
+    response = TestClient(app).post("/api/ingest/url/preview", json={"url": "https://cs.example.edu.cn/teacher/zhangsan"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["indexed"] is False
+    assert payload["ingest_eligible"] is True
+    assert payload["profile_quality_score"] >= 0.55
+    assert payload["tutor"]["name"] == "张三"
+
+
 def test_demo_check_runs_core_endpoints(monkeypatch):
     from scripts import demo_check
 
@@ -279,6 +333,7 @@ def test_index_serves_workflow_ui():
     assert "navigationDepth" in response.text
     assert "匹配高校入口" in response.text
     assert "仅预检不入库" in response.text
+    assert "previewIngestUrl" in response.text
     assert "loadSeedSites" in response.text
     assert "escapeHtml" in response.text
 

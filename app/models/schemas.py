@@ -231,6 +231,15 @@ class IngestUrlResponse(BaseModel):
     indexed: bool
 
 
+class IngestUrlPreviewResponse(BaseModel):
+    tutor: TutorProfile
+    indexed: bool = False
+    ingest_eligible: bool = False
+    profile_quality_score: float = 0.0
+    page_quality: float = 0.0
+    quality_reasons: list[str] = Field(default_factory=list)
+
+
 class BrowserAction(BaseModel):
     type: Literal["click", "wait", "scroll"]
     selector: str | None = None

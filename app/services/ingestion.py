@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app.config import get_settings
 from app.crawlers.faculty import FacultyCrawler
-from app.models.schemas import TutorProfile
+from app.models.schemas import IngestUrlPreviewResponse, TutorProfile
 from app.rag.vector_store import VectorStore
 from app.services.profile_quality import ProfileQualityScorer
 from app.storage.database import init_database
@@ -30,14 +30,26 @@ class IngestionService:
         self.vector_store.upsert_tutor(profile)
         return profile
 
-    def ingest_url(self, url: str) -> TutorProfile:
+    def preview_url(self, url: str) -> IngestUrlPreviewResponse:
         page = self.crawler.browser.fetch(url)
         profile = self.crawler.researcher.structure_faculty_page(page)
         profile.homepage = profile.homepage or url
-        quality = self.profile_quality.score(profile, url, title=str(page.get("title") or ""), text=str(page.get("text") or ""), page_quality=self._page_quality(page))
-        if not quality.ingest_eligible:
-            raise ProfileQualityError(quality.score, quality.reasons)
-        return self.ingest_profile(profile)
+        page_quality = self._page_quality(page)
+        quality = self.profile_quality.score(profile, url, title=str(page.get("title") or ""), text=str(page.get("text") or ""), page_quality=page_quality)
+        return IngestUrlPreviewResponse(
+            tutor=profile,
+            indexed=False,
+            ingest_eligible=quality.ingest_eligible,
+            profile_quality_score=quality.score,
+            page_quality=page_quality,
+            quality_reasons=quality.reasons,
+        )
+
+    def ingest_url(self, url: str) -> TutorProfile:
+        preview = self.preview_url(url)
+        if not preview.ingest_eligible:
+            raise ProfileQualityError(preview.profile_quality_score, preview.quality_reasons)
+        return self.ingest_profile(preview.tutor)
 
     def _page_quality(self, page: dict) -> float:
         text = page.get("text", "") or ""

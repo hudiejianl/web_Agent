@@ -281,6 +281,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 支持候选预检：搜索页、院校导航页、师资列表页、论文页不会被误当作导师个人主页直接入库
 - [x] 支持导师档案质量评分：结合姓名可信度、主页语境、机构/院系、研究方向、邮箱、论文线索和页面质量判断是否可入库
 - [x] 手动 URL 采集入口 `/api/ingest/url` 复用导师档案质量评分，低质量页面返回 422 且不会写入 SQLite / ChromaDB
+- [x] 新增 `/api/ingest/url/preview`：单个导师主页 URL 只抓取、结构化和评分，不写入 SQLite / ChromaDB
 - [x] 支持 Browser Research dry-run 预检模式：只浏览、结构化和评分候选导师，不写入 SQLite / ChromaDB
 - [x] 支持候选质量报告：统计候选总数、可入库数、拒绝数、平均质量分、状态/类型/拒绝原因分布和最高分候选
 - [x] 两套前端展示候选页面质量、档案质量分、是否可入库和拒绝原因，并提供“仅预检不入库”入口
@@ -457,6 +458,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 24. Browser Research 候选质量报告：API 返回质量统计、拒绝原因分布和最高分候选，React 前端展示质量报告面板。`[已完成]`
 25. Browser Research 质量检查脚本：新增 `scripts/browser_quality_check.py`，对运行中的服务执行 dry-run 质量检查并基于合格候选数和平均质量分判定是否通过。`[已完成]`
 26. 手动 URL 采集质量门控：`/api/ingest/url` 复用导师档案质量评分，拒绝搜索页、噪声页和缺少证据的低质量页面，避免绕过 Browser Research 门控污染导师库。`[已完成]`
+27. 单 URL 采集预检：新增 `/api/ingest/url/preview` 和内置前端“仅预检不入库”按钮，可先查看页面质量、档案质量分和拒绝原因再决定是否入库。`[已完成]`
 
 原因：
 

@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
 from app.logging_config import configure_logging
-from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGBenchmarkDatasetSummary, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, SystemCapabilitiesResponse, SystemCapability, TraceRunResponse, UniversitySeedSiteResponse
+from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlPreviewResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGBenchmarkDatasetSummary, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, SystemCapabilitiesResponse, SystemCapability, TraceRunResponse, UniversitySeedSiteResponse
 from app.observability import configure_observability, request_span
 from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
@@ -126,6 +126,11 @@ def system_capabilities() -> SystemCapabilitiesResponse:
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
     return get_chat_service().chat(request.session_id, request.message)
+
+
+@app.post("/api/ingest/url/preview", response_model=IngestUrlPreviewResponse)
+def preview_ingest_url(request: IngestUrlRequest) -> IngestUrlPreviewResponse:
+    return IngestionService().preview_url(str(request.url))
 
 
 @app.post("/api/ingest/url", response_model=IngestUrlResponse)
