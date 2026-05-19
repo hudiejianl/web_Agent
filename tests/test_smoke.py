@@ -88,6 +88,40 @@ def test_run_script_invokes_uvicorn(monkeypatch):
     assert calls == [(("app.main:app",), {"host": "0.0.0.0", "port": 9000, "reload": True})]
 
 
+def test_tutor_data_audit_flags_noisy_records():
+    from app.models.schemas import TutorProfile
+    from scripts.audit_tutor_data import audit_profiles
+
+    valid = TutorProfile(name="张三", institution="示例大学", department="计算机学院", homepage="https://cs.example.edu.cn/teacher/zhangsan", research_areas=["人工智能"], summary="张三教授研究方向为人工智能。")
+    noisy = TutorProfile(name="site:edu.cn 武汉 多模态 人", institution="未知机构", homepage="https://www.bing.com/search?q=demo", summary="旅游 bing 未知")
+
+    report = audit_profiles([valid, noisy])
+
+    assert report.total == 2
+    assert report.valid == 1
+    assert report.invalid == 1
+    assert report.issues[0].name == noisy.name
+    assert "invalid_source_url" in report.issues[0].reasons
+    assert "noisy_name" in report.issues[0].reasons
+
+
+def test_clean_invalid_tutors_dry_run(monkeypatch):
+    from app.models.schemas import TutorProfile
+    from scripts import clean_invalid_tutors
+
+    valid = TutorProfile(id="valid", name="张三", institution="示例大学", department="计算机学院", homepage="https://cs.example.edu.cn/teacher/zhangsan", research_areas=["人工智能"], summary="张三教授研究方向为人工智能。")
+    noisy = TutorProfile(id="bad", name="site:edu.cn 武汉 多模态 人", institution="未知机构", homepage="https://www.bing.com/search?q=demo", summary="旅游 bing 未知")
+    monkeypatch.setattr(clean_invalid_tutors, "load_profiles", lambda: [valid, noisy])
+
+    result = clean_invalid_tutors.clean_invalid_tutors(dry_run=True)
+
+    assert result["dry_run"] is True
+    assert result["would_delete_count"] == 1
+    assert result["deleted_count"] == 0
+    assert result["remaining_report"]["quality_passed"] is True
+
+
+
 def test_demo_check_runs_core_endpoints(monkeypatch):
     from scripts import demo_check
 
@@ -683,6 +717,35 @@ def test_browser_research_follows_deep_navigation_chain(monkeypatch):
     assert "https://cs.example.edu.cn/teacher/zhangsan/papers" in [item["url"] for item in payload["candidates"]]
     assert {item["link_type"] for item in payload["candidates"]} & {"school", "college", "faculty_list", "profile", "paper"}
     assert any(item["action"] == "discover_navigation_links" and "深链路" in item["detail"] for item in payload["trace"])
+
+
+def test_browser_research_rejects_search_page_profiles(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+    from app.models.schemas import BrowserResearchRequest, CandidateLink
+    from app.services.browser_research import BrowserResearchService
+    from app.services.ingestion import IngestionService
+
+    ingested = []
+
+    def fake_fetch(self, url, use_playwright=False, actions=None):
+        return {"url": url, "title": "Search", "text": "site:edu.cn 武汉 多模态 人工智能 导师 旅游 bing 未知", "links": []}
+
+    def fake_ingest_profile(self, profile):
+        ingested.append(profile)
+        return profile
+
+    monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
+    monkeypatch.setattr(IngestionService, "ingest_profile", fake_ingest_profile)
+
+    service = BrowserResearchService()
+    candidate = CandidateLink(text="搜索结果", url="https://www.bing.com/search?q=site%3Aedu.cn", score=9.0, link_type="profile", confidence=0.9)
+    tutors = service._browse_and_ingest(BrowserResearchRequest(query="武汉 多模态 导师"), [candidate], [])
+
+    assert tutors == []
+    assert ingested == []
+    assert candidate.status == "failed"
+    assert "搜索结果页" in candidate.error
+
 
 
 def test_browser_research_endpoint(monkeypatch):

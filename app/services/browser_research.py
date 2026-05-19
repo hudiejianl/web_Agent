@@ -195,6 +195,12 @@ class BrowserResearchService:
                 trace.append(self._trace("Browser Agent", "browse_candidate_page", "completed", f"已打开候选主页：{candidate.url}", {"page_quality": candidate.page_quality, "confidence": candidate.confidence}))
                 profile = self.researcher.structure_faculty_page(page)
                 profile.homepage = profile.homepage or candidate.url
+                quality_error = self._profile_quality_error(profile, candidate, page)
+                if quality_error:
+                    candidate.status = "failed"
+                    candidate.error = quality_error
+                    trace.append(self._trace("Research Agent", "validate_profile_quality", "failed", f"候选档案未入库：{candidate.url}，原因：{quality_error}"))
+                    continue
                 saved = self.ingestion.ingest_profile(profile)
                 tutors.append(saved)
                 candidate.status = "ingested"
@@ -207,6 +213,29 @@ class BrowserResearchService:
             if candidate.status == "pending":
                 candidate.status = "skipped"
         return tutors
+
+    def _profile_quality_error(self, profile: TutorProfile, candidate: CandidateLink, page: dict) -> str | None:
+        url = (profile.homepage or candidate.url or "").lower()
+        host = urlparse(url).netloc.lower()
+        name = (profile.name or "").strip()
+        text = f"{page.get('title') or ''} {page.get('text') or ''}"
+        invalid_names = {"未知导师", "导师", "教师", "教授", "副教授", "讲师", "研究员", "特聘", "女副", "武汉市"}
+        if any(domain in host for domain in ["bing.com", "baidu.com", "sogou.com", "so.com"]) or "/search?" in url:
+            return "搜索结果页不能作为导师主页"
+        if host.endswith("gov.cn") or "baike.baidu.com" in host:
+            return "非导师主页来源"
+        if not name or name in invalid_names or len(name) > 12:
+            return "导师姓名不可信"
+        if any(token in name.lower() for token in ["site:", "http", "www", "search", "bing", "baidu"]) or any(token in name for token in ["æ", "å", "�"]):
+            return "导师姓名疑似噪声"
+        has_profile_context = candidate.link_type == "profile" or any(token in url for token in ["teacher", "tutor", "profile", "person", "teacherinfo"]) or any(token in text for token in ["个人主页", "教师简介", "导师简介", "研究方向"])
+        if not has_profile_context:
+            return "页面不像导师个人主页"
+        if profile.institution == "未知机构" and not profile.department:
+            return "缺少可信机构或院系"
+        if not profile.research_areas and not profile.email and not profile.papers:
+            return "缺少研究方向、邮箱或论文证据"
+        return None
 
     def _pagination_links(self, links: object, source_url: str) -> list[CandidateLink]:
         if not isinstance(links, list):

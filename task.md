@@ -400,6 +400,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 增加独立 React / Vite 前端工程，可连接 FastAPI API 展示工作流 UI。
    - [x] 两套前端均支持预览高校种子入口、匹配原因和匹配词。
    - [x] 增加端到端演示检查脚本，覆盖 health、chat、seed-sites 和 RAG Evaluation。
+   - [x] 增加导师数据质量审计和无效数据清理脚本。
    - [x] 可选接入 LangSmith 或 OpenTelemetry。
 
 ---
@@ -444,6 +445,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 18. 高校入口匹配解释：种子库扩展到 16 个高校/学院入口，并在 API 与两套前端展示匹配词和匹配原因。`[已完成]`
 19. React RAG Evaluation 面板：展示 benchmark 数据集摘要、baseline / hybrid / reranker 策略对比和 chunk 配置对比。`[已完成]`
 20. 端到端演示检查脚本：新增 `scripts/demo_check.py`，可对运行中的 FastAPI 服务执行 health、chat、seed-sites、RAG dataset 和 RAG compare 检查。`[已完成]`
+21. 导师数据质量审计与清理：新增 `scripts/audit_tutor_data.py` 和 `scripts/clean_invalid_tutors.py`，并已清理本地运行库中 8 条无效抓取记录。`[已完成]`
 
 原因：
 
