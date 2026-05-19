@@ -13,6 +13,9 @@ function App() {
   const [chatResult, setChatResult] = useState(null)
   const [researchResult, setResearchResult] = useState(null)
   const [seedSites, setSeedSites] = useState(null)
+  const [ragDataset, setRagDataset] = useState(null)
+  const [ragComparison, setRagComparison] = useState(null)
+  const [ragConfigurations, setRagConfigurations] = useState(null)
   const [capabilities, setCapabilities] = useState(null)
   const [activeTab, setActiveTab] = useState('plan')
   const [loading, setLoading] = useState('')
@@ -69,6 +72,24 @@ function App() {
       const query = encodeURIComponent(researchQuery)
       const data = await requestJson(`/api/browser/seed-sites?q=${query}&limit=6`)
       setSeedSites(data.sites || [])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading('')
+    }
+  }
+
+  async function loadRagEvaluation() {
+    setLoading('rag-eval')
+    try {
+      const [dataset, comparison, configurations] = await Promise.all([
+        requestJson('/api/eval/rag/dataset'),
+        requestJson('/api/eval/rag/compare?limit=5'),
+        requestJson('/api/eval/rag/configurations?limit=5'),
+      ])
+      setRagDataset(dataset)
+      setRagComparison(comparison)
+      setRagConfigurations(configurations)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -160,6 +181,14 @@ function App() {
 
       <CapabilityPanel data={capabilities} />
 
+      <RagEvaluationPanel
+        dataset={ragDataset}
+        comparison={ragComparison}
+        configurations={ragConfigurations}
+        loading={loading === 'rag-eval'}
+        onLoad={loadRagEvaluation}
+      />
+
       <section className="panel">
         <nav className="tabs">
           {[
@@ -211,6 +240,62 @@ function CapabilityPanel({ data }) {
       </ul>
     </section>
   )
+}
+
+function RagEvaluationPanel({ dataset, comparison, configurations, loading, onLoad }) {
+  const strategies = comparison?.strategies || []
+  const configResults = configurations?.configurations || []
+  return (
+    <section className="panel rag-panel">
+      <div className="panel-heading">
+        <div>
+          <h2>RAG Evaluation</h2>
+          <p>对比 baseline、hybrid、reranker 以及不同 chunk 配置的 Recall、Precision、Relevance 和 Faithfulness。</p>
+        </div>
+        <button type="button" onClick={onLoad} disabled={loading}>{loading ? '评估中...' : '加载评估'}</button>
+      </div>
+      {dataset ? (
+        <div className="stats rag-stats">
+          <Stat label="评测用例" value={dataset.case_count} />
+          <Stat label="期望导师" value={dataset.expected_tutor_count} />
+          <Stat label="覆盖地区" value={dataset.covered_locations.length} />
+          <Stat label="研究主题" value={dataset.covered_research_terms.length} />
+        </div>
+      ) : <Empty text="暂无评估数据集摘要" />}
+      <EvaluationTable title="策略对比" items={strategies} />
+      <EvaluationTable title="配置对比" items={configResults} showConfig />
+    </section>
+  )
+}
+
+function EvaluationTable({ title, items, showConfig = false }) {
+  if (!items.length) return <div className="eval-section"><h3>{title}</h3><Empty text="暂无评估结果" /></div>
+  return (
+    <div className="eval-section">
+      <h3>{title}</h3>
+      <div className="eval-table">
+        <div className="eval-row header"><span>配置</span><span>Recall</span><span>Precision</span><span>Relevance</span><span>Faithfulness</span></div>
+        {items.map((item, index) => (
+          <div className="eval-row" key={`${title}-${item.strategy}-${index}`}>
+            <span>{showConfig ? formatConfig(item) : item.strategy}</span>
+            <span>{formatMetric(item.recall)}</span>
+            <span>{formatMetric(item.precision)}</span>
+            <span>{formatMetric(item.relevance)}</span>
+            <span>{formatMetric(item.faithfulness)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function formatConfig(item) {
+  const config = item.config || {}
+  return `${config.retrieval_strategy || item.strategy} · chunk ${config.chunk_size || '-'} / ${config.chunk_overlap || 0}`
+}
+
+function formatMetric(value) {
+  return Number(value ?? 0).toFixed(4)
 }
 
 function PlanView({ steps }) {

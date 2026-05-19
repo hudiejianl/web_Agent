@@ -389,6 +389,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 增加 Faithfulness 评估。
    - [x] 保存历史评估结果。
    - [x] 对比不同 embedding、reranker 和 chunking 配置。
+   - [x] React 前端支持加载评估数据集摘要、策略对比和配置对比。
 7. **Browser Agent 深度增强**
    - [x] 支持导师列表页分页识别。
    - [x] 支持更深链路导航：高校主页 → 学院主页 → 师资列表 → 导师主页 → 论文页。
@@ -440,6 +441,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 16. 配置安全上限裁剪：对 Browser Research、RAG chunk、上下文窗口和超时配置做集中保护。`[已完成]`
 17. 高校种子站点库：新增 `data/sample/university_seed_sites.json`、`GET /api/browser/seed-sites`，Browser Research 可自动注入匹配入口。`[已完成]`
 18. 高校入口匹配解释：种子库扩展到 16 个高校/学院入口，并在 API 与两套前端展示匹配词和匹配原因。`[已完成]`
+19. React RAG Evaluation 面板：展示 benchmark 数据集摘要、baseline / hybrid / reranker 策略对比和 chunk 配置对比。`[已完成]`
 
 原因：
 
