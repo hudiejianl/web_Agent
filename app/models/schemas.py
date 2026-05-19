@@ -177,7 +177,7 @@ class AgentPlanRun(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
-# AgentTrace 记录一次请求中每个智能体节点的执行轨迹，后续会持久化用于调试和展示。
+# AgentTrace 记录一次请求中每个智能体节点的执行轨迹，用于持久化调试和前端展示。
 class AgentTrace(BaseModel):
     agent: str
     action: str
