@@ -90,8 +90,10 @@
         <div><label for="maxCandidates">候选链接数</label><input id="maxCandidates" type="number" min="1" max="20" value="8" /></div>
         <div><label for="maxIngest">入库导师数</label><input id="maxIngest" type="number" min="1" max="5" value="3" /></div>
       </div>
-      <p><button type="button" onclick="runBrowserResearch()">自动搜索并入库</button></p>
+      <p><button type="button" onclick="runBrowserResearch()">自动搜索并入库</button> <button type="button" class="ghost" onclick="loadSeedSites()">预览高校入口</button></p>
       <pre id="researchResult">暂无自动研究结果</pre>
+      <h3>匹配高校入口</h3>
+      <div id="seedSites" class="muted">暂无高校入口数据</div>
       <h3>候选链路</h3>
       <div id="candidates" class="muted">暂无候选链路</div>
       <h3>候选导师</h3>
@@ -188,6 +190,22 @@
           <span class="muted">${escapeHtml((item.features || []).join('、'))}</span>
         </div>
       `).join('') + `<div class="card"><strong>推荐下一步</strong><br /><span class="muted">${escapeHtml((data.next_recommended_steps || []).join('；'))}</span></div>`;
+    }
+
+    async function loadSeedSites() {
+      const output = document.getElementById('seedSites');
+      const query = encodeURIComponent(document.getElementById('researchQuery').value);
+      output.innerHTML = '<p>正在匹配高校入口...</p>';
+      const res = await fetch(`/api/browser/seed-sites?q=${query}&limit=6`);
+      const data = await res.json();
+      if (!res.ok) { output.textContent = JSON.stringify(data, null, 2); return; }
+      output.innerHTML = data.sites.map(site => `
+        <div class="card candidate">
+          <strong>${escapeHtml(site.name)}</strong> <span class="badge">${escapeHtml(site.score)}</span><br />
+          <span class="muted">${escapeHtml(site.location)} · ${escapeHtml(site.institution)} · ${escapeHtml((site.tags || []).join('、'))}</span><br />
+          <span>${escapeHtml(site.url)}</span>
+        </div>
+      `).join('') || '<p class="muted">未匹配到高校入口</p>';
     }
 
     async function runBrowserResearch() {

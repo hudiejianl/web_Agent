@@ -105,6 +105,8 @@ def test_index_serves_workflow_ui():
     assert "系统能力概览" in response.text
     assert "loadCapabilities" in response.text
     assert "navigationDepth" in response.text
+    assert "匹配高校入口" in response.text
+    assert "loadSeedSites" in response.text
     assert "escapeHtml" in response.text
 
 

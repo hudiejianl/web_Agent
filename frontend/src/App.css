@@ -16,6 +16,7 @@ button, textarea, input { font: inherit; }
 button { border: 0; border-radius: 12px; padding: 11px 16px; background: var(--blue); color: white; cursor: pointer; font-weight: 700; }
 button:disabled { opacity: .65; cursor: wait; }
 button.secondary { background: var(--green); }
+button.ghost { background: #e2e8f0; color: #0f172a; }
 textarea, input { width: 100%; border: 1px solid #d7deea; border-radius: 12px; padding: 12px; }
 pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius: 12px; padding: 14px; overflow-x: auto; min-height: 130px; }
 
@@ -33,6 +34,11 @@ pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius:
 .panel.primary textarea { min-height: 140px; }
 .answer { min-height: 220px; }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
+.action-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.seed-sites { margin: 12px 0; }
+.seed-sites h3 { margin: 0 0 8px; }
+.seed-empty { margin: 10px 0; }
+.url-text { word-break: break-all; }
 .field-grid label { color: var(--muted); font-size: 14px; }
 .field-grid input { margin-top: 6px; }
 .alert { margin-top: 16px; padding: 12px 14px; border-radius: 12px; color: var(--danger); background: #fee2e2; }

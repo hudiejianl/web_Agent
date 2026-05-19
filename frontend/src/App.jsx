@@ -12,6 +12,7 @@ function App() {
   const [maxNavigationPages, setMaxNavigationPages] = useState(8)
   const [chatResult, setChatResult] = useState(null)
   const [researchResult, setResearchResult] = useState(null)
+  const [seedSites, setSeedSites] = useState(null)
   const [capabilities, setCapabilities] = useState(null)
   const [activeTab, setActiveTab] = useState('plan')
   const [loading, setLoading] = useState('')
@@ -55,6 +56,19 @@ function App() {
       })
       setChatResult(data)
       setActiveTab('plan')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading('')
+    }
+  }
+
+  async function loadSeedSites() {
+    setLoading('seed-sites')
+    try {
+      const query = encodeURIComponent(researchQuery)
+      const data = await requestJson(`/api/browser/seed-sites?q=${query}&limit=6`)
+      setSeedSites(data.sites || [])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -120,9 +134,15 @@ function App() {
             <label>导航深度<input type="number" min="0" max="5" value={navigationDepth} onChange={(event) => setNavigationDepth(event.target.value)} /></label>
             <label>最多导航页<input type="number" min="1" max="20" value={maxNavigationPages} onChange={(event) => setMaxNavigationPages(event.target.value)} /></label>
           </div>
-          <button type="button" className="secondary" onClick={runBrowserResearch} disabled={loading === 'research'}>
-            {loading === 'research' ? '深度研究中...' : '自动搜索并入库'}
-          </button>
+          <div className="action-row">
+            <button type="button" className="secondary" onClick={runBrowserResearch} disabled={loading === 'research'}>
+              {loading === 'research' ? '深度研究中...' : '自动搜索并入库'}
+            </button>
+            <button type="button" className="ghost" onClick={loadSeedSites} disabled={loading === 'seed-sites'}>
+              {loading === 'seed-sites' ? '匹配中...' : '预览高校入口'}
+            </button>
+          </div>
+          <SeedSitePreview sites={seedSites} />
           <pre>{researchResult ? JSON.stringify({ trace_id: researchResult.trace_id, rewritten_queries: researchResult.rewritten_queries, tutors: researchResult.tutors?.map((item) => item.name) }, null, 2) : '等待 Browser Research 结果...'}</pre>
         </section>
       </main>
@@ -206,6 +226,24 @@ function TraceView({ items }) {
 function EvidenceView({ items }) {
   if (!items.length) return <Empty text="暂无检索证据" />
   return items.map((item, index) => <article className="row" key={`${item.tutor_id}-${index}`}><Badge value={item.field} /><div><strong>{item.tutor_name}</strong><p>{item.snippet}</p><small>匹配词：{item.matched_terms?.join('、') || '无'} · score {item.score}</small></div></article>)
+}
+
+function SeedSitePreview({ sites }) {
+  if (sites === null) return <p className="empty seed-empty">暂无高校入口预览</p>
+  if (!sites.length) return <p className="empty seed-empty">未匹配到高校入口</p>
+  return (
+    <div className="seed-sites">
+      <h3>匹配高校入口</h3>
+      {sites.map((site) => (
+        <article className="card" key={site.url}>
+          <strong>{site.name}</strong>
+          <p>{site.location} · {site.institution}</p>
+          <small>score {site.score} · {site.tags?.join('、') || '无标签'}</small>
+          <p className="url-text">{site.url}</p>
+        </article>
+      ))}
+    </div>
+  )
 }
 
 function CandidateView({ items }) {
