@@ -55,6 +55,9 @@ pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius:
 .row small, .card small { color: var(--muted); }
 .card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 10px 0; }
 .card p { margin: 6px 0; color: var(--muted); }
+.capability-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.capability-grid .card { margin: 0; }
+.next-steps { margin: 8px 0 0; color: var(--muted); line-height: 1.8; }
 .badge { display: inline-flex; justify-content: center; align-items: center; align-self: start; border-radius: 999px; padding: 4px 10px; background: #dbeafe; color: #1e40af; font-size: 12px; font-weight: 800; word-break: break-word; }
 .badge.completed, .badge.ingested { background: #dcfce7; color: #166534; }
 .badge.failed { background: #fee2e2; color: #991b1b; }
@@ -64,10 +67,10 @@ pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius:
 @media (max-width: 920px) {
   .app-shell { padding: 14px; }
   .hero, .layout { grid-template-columns: 1fr; }
-  .stats, .field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats, .field-grid, .capability-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .row { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {
-  .stats, .field-grid { grid-template-columns: 1fr; }
+  .stats, .field-grid, .capability-grid { grid-template-columns: 1fr; }
 }

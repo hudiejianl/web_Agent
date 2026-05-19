@@ -74,6 +74,8 @@ def test_index_serves_workflow_ui():
 
     assert response.status_code == 200
     assert "工作流可视化" in response.text
+    assert "系统能力概览" in response.text
+    assert "loadCapabilities" in response.text
     assert "navigationDepth" in response.text
     assert "escapeHtml" in response.text
 

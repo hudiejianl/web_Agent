@@ -66,6 +66,9 @@
       <div id="evidencePanel" class="panel"><div id="retrievalEvidence" class="muted">暂无检索证据</div></div>
       <div id="memoryPanel" class="panel"><pre id="memoryView">暂无长期记忆</pre></div>
       <div id="handoffPanel" class="panel"><div id="handoffs" class="muted">暂无 Agent 交接记录</div></div>
+      <h3>系统能力概览</h3>
+      <p><button type="button" onclick="loadCapabilities()">加载系统能力</button></p>
+      <div id="capabilities" class="muted">暂无系统能力数据</div>
       <h3>RAG Evaluation 报告</h3>
       <p class="muted">对比 baseline、hybrid 和 reranker 三种检索策略的 Recall、Precision、Relevance 与 Faithfulness。</p>
       <p><button type="button" onclick="runRagEvaluationReport()">生成评估报告</button></p>
@@ -171,6 +174,20 @@
       const res = await fetch('/api/eval/rag/report');
       const data = await res.json();
       output.textContent = res.ok ? data.markdown : JSON.stringify(data, null, 2);
+    }
+
+    async function loadCapabilities() {
+      const output = document.getElementById('capabilities');
+      output.innerHTML = '<p>正在加载系统能力...</p>';
+      const res = await fetch('/api/system/capabilities');
+      const data = await res.json();
+      if (!res.ok) { output.textContent = JSON.stringify(data, null, 2); return; }
+      output.innerHTML = data.capabilities.map(item => `
+        <div class="card">
+          <strong>${escapeHtml(item.name)}</strong> ${badge(item.status)}<br />
+          <span class="muted">${escapeHtml((item.features || []).join('、'))}</span>
+        </div>
+      `).join('') + `<div class="card"><strong>推荐下一步</strong><br /><span class="muted">${escapeHtml((data.next_recommended_steps || []).join('；'))}</span></div>`;
     }
 
     async function runBrowserResearch() {

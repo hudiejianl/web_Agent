@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 const defaultMessage = '我想申请 AI 和 RAG 方向硕士，偏好江浙沪，帮我推荐导师。'
@@ -12,11 +12,18 @@ function App() {
   const [maxNavigationPages, setMaxNavigationPages] = useState(8)
   const [chatResult, setChatResult] = useState(null)
   const [researchResult, setResearchResult] = useState(null)
+  const [capabilities, setCapabilities] = useState(null)
   const [activeTab, setActiveTab] = useState('plan')
   const [loading, setLoading] = useState('')
   const [error, setError] = useState('')
 
   localStorage.setItem('sessionId', sessionId)
+
+  useEffect(() => {
+    requestJson('/api/system/capabilities')
+      .then(setCapabilities)
+      .catch((err) => setError(err.message))
+  }, [])
 
   const workflow = useMemo(() => {
     const plan = chatResult?.plan
@@ -131,6 +138,8 @@ function App() {
         <div className="progress"><span style={{ width: `${workflow.progress}%` }} /></div>
       </section>
 
+      <CapabilityPanel data={capabilities} />
+
       <section className="panel">
         <nav className="tabs">
           {[
@@ -159,6 +168,29 @@ function App() {
 
 function Stat({ label, value, danger }) {
   return <div className={danger ? 'stat danger' : 'stat'}><span>{label}</span><strong>{value}</strong></div>
+}
+
+function CapabilityPanel({ data }) {
+  if (!data) {
+    return <section className="panel"><h2>系统能力概览</h2><p className="empty">正在加载系统能力...</p></section>
+  }
+  return (
+    <section className="panel">
+      <h2>系统能力概览</h2>
+      <div className="capability-grid">
+        {data.capabilities.map((item) => (
+          <article className="card" key={item.name}>
+            <strong>{item.name}</strong>
+            <p>{item.features.join('、')}</p>
+          </article>
+        ))}
+      </div>
+      <h3>推荐下一步</h3>
+      <ul className="next-steps">
+        {data.next_recommended_steps.map((item) => <li key={item}>{item}</li>)}
+      </ul>
+    </section>
+  )
 }
 
 function PlanView({ steps }) {
