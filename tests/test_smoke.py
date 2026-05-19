@@ -88,6 +88,44 @@ def test_run_script_invokes_uvicorn(monkeypatch):
     assert calls == [(("app.main:app",), {"host": "0.0.0.0", "port": 9000, "reload": True})]
 
 
+def test_demo_check_runs_core_endpoints(monkeypatch):
+    from scripts import demo_check
+
+    calls = []
+
+    class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_request(method, url, timeout=30, **kwargs):
+        calls.append((method, url, kwargs))
+        if url.endswith("/api/health"):
+            return FakeResponse({"status": "ok", "app": "demo"})
+        if url.endswith("/api/chat"):
+            return FakeResponse({"answer": "建议", "trace_id": "trace-1", "plan": {"steps": [{"id": "retrieve"}]}, "tutors": [{"name": "李老师"}]})
+        if url.endswith("/api/browser/seed-sites"):
+            return FakeResponse({"sites": [{"score": 3.0, "reason": "匹配武汉"}]})
+        if url.endswith("/api/eval/rag/dataset"):
+            return FakeResponse({"case_count": 1, "cases": [{"id": "case-1"}]})
+        if url.endswith("/api/eval/rag/compare"):
+            return FakeResponse({"strategies": [{"strategy": "baseline"}, {"strategy": "hybrid"}, {"strategy": "reranker"}]})
+        raise AssertionError(url)
+
+    monkeypatch.setattr(demo_check.requests, "request", fake_request)
+
+    results = demo_check.run_checks("http://server.local/", session_id="demo")
+
+    assert [result.name for result in results] == ["health", "chat", "seed-sites", "rag-dataset", "rag-compare"]
+    assert all(result.ok for result in results)
+    assert calls[1][2]["json"]["session_id"] == "demo"
+
+
 def test_health():
     client = TestClient(app)
     response = client.get("/api/health", headers={"X-Request-ID": "test-request-id"})
