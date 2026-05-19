@@ -178,6 +178,7 @@ def test_index_serves_workflow_ui():
     assert "loadCapabilities" in response.text
     assert "navigationDepth" in response.text
     assert "匹配高校入口" in response.text
+    assert "仅预检不入库" in response.text
     assert "loadSeedSites" in response.text
     assert "escapeHtml" in response.text
 
@@ -808,6 +809,36 @@ def test_browser_research_scores_valid_profile_for_ingest(monkeypatch):
     assert candidate.ingest_eligible is True
     assert candidate.profile_quality_score >= 0.55
     assert "识别到研究方向" in candidate.quality_reasons
+
+
+def test_browser_research_dry_run_scores_without_ingesting(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+    from app.models.schemas import BrowserResearchRequest, CandidateLink
+    from app.services.browser_research import BrowserResearchService
+    from app.services.ingestion import IngestionService
+
+    def fake_fetch(self, url, use_playwright=False, actions=None):
+        return {
+            "url": url,
+            "title": "张三 教授 - 示例大学计算机学院",
+            "text": "张三 教授 示例大学 计算机学院 个人主页 教师简介 研究方向 人工智能 多模态 招生 代表论文 zhangsan@example.edu.cn " * 8,
+            "links": [],
+        }
+
+    def fake_ingest_profile(self, profile):
+        raise AssertionError("dry_run must not write profiles")
+
+    monkeypatch.setattr(BrowserAgent, "fetch", fake_fetch)
+    monkeypatch.setattr(IngestionService, "ingest_profile", fake_ingest_profile)
+
+    service = BrowserResearchService()
+    candidate = CandidateLink(text="张三 教授 个人主页", url="https://cs.example.edu.cn/teacher/zhangsan", score=9.0, link_type="profile")
+    tutors = service._browse_and_ingest(BrowserResearchRequest(query="人工智能 多模态 导师", dry_run=True), [candidate], [])
+
+    assert [tutor.name for tutor in tutors] == ["张三"]
+    assert candidate.status == "browsed"
+    assert candidate.ingest_eligible is True
+    assert candidate.profile_quality_score >= 0.55
 
 
 def test_browser_research_endpoint(monkeypatch):

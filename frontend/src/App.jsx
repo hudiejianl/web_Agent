@@ -97,8 +97,8 @@ function App() {
     }
   }
 
-  async function runBrowserResearch() {
-    setLoading('research')
+  async function runBrowserResearch(dryRun = false) {
+    setLoading(dryRun ? 'research-preview' : 'research')
     try {
       const data = await requestJson('/api/browser/research', {
         method: 'POST',
@@ -111,6 +111,7 @@ function App() {
           navigation_depth: Number(navigationDepth),
           max_navigation_pages: Number(maxNavigationPages),
           use_playwright: true,
+          dry_run: dryRun,
         }),
       })
       setResearchResult(data)
@@ -156,15 +157,18 @@ function App() {
             <label>最多导航页<input type="number" min="1" max="20" value={maxNavigationPages} onChange={(event) => setMaxNavigationPages(event.target.value)} /></label>
           </div>
           <div className="action-row">
-            <button type="button" className="secondary" onClick={runBrowserResearch} disabled={loading === 'research'}>
+            <button type="button" className="secondary" onClick={() => runBrowserResearch(false)} disabled={loading === 'research'}>
               {loading === 'research' ? '深度研究中...' : '自动搜索并入库'}
+            </button>
+            <button type="button" className="ghost" onClick={() => runBrowserResearch(true)} disabled={loading === 'research-preview'}>
+              {loading === 'research-preview' ? '预检中...' : '仅预检不入库'}
             </button>
             <button type="button" className="ghost" onClick={loadSeedSites} disabled={loading === 'seed-sites'}>
               {loading === 'seed-sites' ? '匹配中...' : '预览高校入口'}
             </button>
           </div>
           <SeedSitePreview sites={seedSites} />
-          <pre>{researchResult ? JSON.stringify({ trace_id: researchResult.trace_id, rewritten_queries: researchResult.rewritten_queries, tutors: researchResult.tutors?.map((item) => item.name) }, null, 2) : '等待 Browser Research 结果...'}</pre>
+          <pre>{researchResult ? JSON.stringify({ mode: researchResult.dry_run ? '仅预检，不写库' : '搜索并入库', trace_id: researchResult.trace_id, rewritten_queries: researchResult.rewritten_queries, candidates: { total: researchResult.candidates?.length || 0, eligible: researchResult.candidates?.filter((item) => item.ingest_eligible).length || 0 }, tutors: researchResult.tutors?.map((item) => item.name) }, null, 2) : '等待 Browser Research 结果...'}</pre>
         </section>
       </main>
 

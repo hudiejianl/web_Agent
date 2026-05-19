@@ -285,11 +285,13 @@ class BrowserResearchRequest(BaseModel):
     navigation_depth: int = 1
     max_navigation_pages: int = 8
     use_playwright: bool = True
+    dry_run: bool = False
 
 
 class BrowserResearchResponse(BaseModel):
     query: str
     trace_id: str = ""
+    dry_run: bool = False
     rewritten_queries: list[str] = Field(default_factory=list)
     search_urls: list[str] = Field(default_factory=list)
     candidates: list[CandidateLink] = Field(default_factory=list)

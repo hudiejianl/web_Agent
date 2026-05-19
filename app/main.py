@@ -110,7 +110,7 @@ def system_capabilities() -> SystemCapabilitiesResponse:
             SystemCapability(name="Multi-Agent Workflow", features=["LangGraph workflow", "structured planning", "agent handoffs", "persistent plans and traces"]),
             SystemCapability(name="RAG Retrieval", features=["dense retrieval", "BM25", "hybrid retrieval", "reranker", "chunking", "highlighted evidence"]),
             SystemCapability(name="Memory", features=["episodic memory", "semantic memory", "procedural memory", "memory retrieval", "reflection", "conflict resolution", "context compression"]),
-            SystemCapability(name="Browser Research", features=["query rewriting", "search filtering", "Playwright browsing", "deep navigation", "candidate confidence", "profile ingestion"]),
+            SystemCapability(name="Browser Research", features=["query rewriting", "search filtering", "Playwright browsing", "deep navigation", "candidate confidence", "profile quality scoring", "dry-run precheck", "profile ingestion"]),
             SystemCapability(name="Evaluation", features=["benchmark dataset", "recall", "precision", "relevance", "faithfulness", "configuration comparison", "saved evaluation runs"]),
             SystemCapability(name="Frontend", features=["built-in workflow UI", "React/Vite workflow frontend", "Plan/Trace/Evidence/Memory/Handoff visualization"]),
             SystemCapability(name="Engineering", features=["Dockerfile", "startup script", "request IDs", "structured errors", "optional OpenTelemetry"]),

@@ -43,10 +43,12 @@ class BrowserResearchService:
         candidates = self._collect_candidates(request, search_urls, rewritten_queries, allowed_domains, trace)
         candidates = self._discover_navigation_candidates(request, candidates, rewritten_queries, allowed_domains, trace)
         tutors = self._browse_and_ingest(request, candidates, trace)
-        trace.append(self._trace("Advisor Agent", "summarize_research", "completed", f"筛选 {len(candidates)} 个候选链接，入库 {len(tutors)} 位导师"))
+        summary_action = "预检" if request.dry_run else "入库"
+        trace.append(self._trace("Advisor Agent", "summarize_research", "completed", f"筛选 {len(candidates)} 个候选链接，{summary_action} {len(tutors)} 位导师"))
         trace_run = self.traces.save(session_id="browser-research", source="browser_research", trace=trace)
         return BrowserResearchResponse(
             query=request.query,
+            dry_run=request.dry_run,
             trace_id=trace_run.trace_id,
             rewritten_queries=rewritten_queries,
             search_urls=search_urls,
@@ -211,6 +213,11 @@ class BrowserResearchService:
                     candidate.status = "failed"
                     candidate.error = "；".join(candidate.quality_reasons)
                     trace.append(self._trace("Research Agent", "validate_profile_quality", "failed", f"候选档案未入库：{candidate.url}，质量分 {candidate.profile_quality_score}，原因：{candidate.error}", self._quality_metadata(candidate)))
+                    continue
+                if request.dry_run:
+                    tutors.append(profile)
+                    candidate.status = "browsed"
+                    trace.append(self._trace("Research Agent", "preview_profile_quality", "completed", f"预检通过但未写库：{profile.name}，质量分 {candidate.profile_quality_score}", self._quality_metadata(candidate)))
                     continue
                 saved = self.ingestion.ingest_profile(profile)
                 tutors.append(saved)

@@ -90,7 +90,7 @@
         <div><label for="maxCandidates">候选链接数</label><input id="maxCandidates" type="number" min="1" max="20" value="8" /></div>
         <div><label for="maxIngest">入库导师数</label><input id="maxIngest" type="number" min="1" max="5" value="3" /></div>
       </div>
-      <p><button type="button" onclick="runBrowserResearch()">自动搜索并入库</button> <button type="button" class="ghost" onclick="loadSeedSites()">预览高校入口</button></p>
+      <p><button type="button" onclick="runBrowserResearch(false)">自动搜索并入库</button> <button type="button" class="ghost" onclick="runBrowserResearch(true)">仅预检不入库</button> <button type="button" class="ghost" onclick="loadSeedSites()">预览高校入口</button></p>
       <pre id="researchResult">暂无自动研究结果</pre>
       <h3>匹配高校入口</h3>
       <div id="seedSites" class="muted">暂无高校入口数据</div>
@@ -209,9 +209,9 @@
       `).join('') || '<p class="muted">未匹配到高校入口</p>';
     }
 
-    async function runBrowserResearch() {
+    async function runBrowserResearch(dryRun = false) {
       const output = document.getElementById('researchResult');
-      output.textContent = 'Autonomous Browser Research Agent 正在搜索、筛选、深度导航并入库...';
+      output.textContent = dryRun ? 'Autonomous Browser Research Agent 正在预检候选页面，不会写入数据库...' : 'Autonomous Browser Research Agent 正在搜索、筛选、深度导航并入库...';
       const res = await fetch('/api/browser/research', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -221,17 +221,24 @@
           max_ingest: Number(document.getElementById('maxIngest').value),
           navigation_depth: Number(document.getElementById('navigationDepth').value),
           max_navigation_pages: Number(document.getElementById('maxNavigationPages').value),
-          use_playwright: true
+          use_playwright: true,
+          dry_run: dryRun
         })
       });
       const data = await res.json();
       if (!res.ok) { output.textContent = JSON.stringify(data, null, 2); return; }
       output.textContent = JSON.stringify({
+        mode: data.dry_run ? '仅预检，不写库' : '搜索并入库',
         query: data.query,
         trace_id: data.trace_id,
         rewritten_queries: data.rewritten_queries,
         search_urls: data.search_urls,
-        ingested_tutors: (data.tutors || []).map(t => ({name: t.name, institution: t.institution, homepage: t.homepage, areas: t.research_areas}))
+        candidate_summary: {
+          total: (data.candidates || []).length,
+          eligible: (data.candidates || []).filter(item => item.ingest_eligible).length,
+          rejected: (data.candidates || []).filter(item => !item.ingest_eligible).length
+        },
+        tutors: (data.tutors || []).map(t => ({name: t.name, institution: t.institution, homepage: t.homepage, areas: t.research_areas}))
       }, null, 2);
       renderCandidates(data.candidates || []);
       renderTrace(data.trace || []);
