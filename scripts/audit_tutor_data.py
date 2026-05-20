@@ -11,6 +11,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.models.schemas import TutorProfile
+from app.storage.repositories import load_tutors_from_json
 from app.services.ingestion import ensure_seed_data
 from app.storage.database import get_connection, init_database
 
@@ -46,6 +47,10 @@ def load_profiles() -> list[TutorProfile]:
     with get_connection() as connection:
         rows = connection.execute("SELECT payload FROM tutors ORDER BY updated_at DESC").fetchall()
     return [TutorProfile.model_validate_json(row["payload"]) for row in rows]
+
+
+def load_profiles_for_audit(sample_path: str = "") -> list[TutorProfile]:
+    return load_tutors_from_json(sample_path) if sample_path else load_profiles()
 
 
 def audit_profiles(profiles: list[TutorProfile]) -> TutorAuditReport:
@@ -99,23 +104,30 @@ def quality_reasons(profile: TutorProfile) -> list[str]:
 
 def report_to_dict(report: TutorAuditReport) -> dict[str, Any]:
     payload = asdict(report)
+    payload["valid_ratio"] = round(report.valid / report.total, 4) if report.total else 0.0
     payload["quality_passed"] = report.invalid == 0
     return payload
 
 
+def audit_tutor_data(sample_path: str = "") -> TutorAuditReport:
+    return audit_profiles(load_profiles_for_audit(sample_path))
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Audit stored tutor profiles for noisy or invalid records.")
+    parser = argparse.ArgumentParser(description="Audit stored or sampled tutor profiles for noisy or invalid records.")
+    parser.add_argument("--sample", default="", help="Optional tutor sample JSON to audit instead of the runtime tutor database.")
     parser.add_argument("--fail-on-invalid", action="store_true")
+    parser.add_argument("--min-valid-ratio", type=float, default=0.0)
     parser.add_argument("--output", default="")
     args = parser.parse_args()
 
-    report = audit_profiles(load_profiles())
+    report = audit_tutor_data(args.sample)
     payload = report_to_dict(report)
     rendered = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.output:
         Path(args.output).write_text(rendered + "\n", encoding="utf-8")
     print(rendered)
-    if args.fail_on_invalid and report.invalid:
+    if (args.fail_on_invalid and report.invalid) or payload["valid_ratio"] < args.min_valid_ratio:
         raise SystemExit(1)
 
 

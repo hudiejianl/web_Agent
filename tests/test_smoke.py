@@ -90,19 +90,44 @@ def test_run_script_invokes_uvicorn(monkeypatch):
 
 def test_tutor_data_audit_flags_noisy_records():
     from app.models.schemas import TutorProfile
-    from scripts.audit_tutor_data import audit_profiles
+    from scripts.audit_tutor_data import audit_profiles, report_to_dict
 
     valid = TutorProfile(name="张三", institution="示例大学", department="计算机学院", homepage="https://cs.example.edu.cn/teacher/zhangsan", research_areas=["人工智能"], summary="张三教授研究方向为人工智能。")
     noisy = TutorProfile(name="site:edu.cn 武汉 多模态 人", institution="未知机构", homepage="https://www.bing.com/search?q=demo", summary="旅游 bing 未知")
 
     report = audit_profiles([valid, noisy])
+    payload = report_to_dict(report)
 
     assert report.total == 2
     assert report.valid == 1
     assert report.invalid == 1
+    assert payload["valid_ratio"] == 0.5
+    assert payload["quality_passed"] is False
     assert report.issues[0].name == noisy.name
     assert "invalid_source_url" in report.issues[0].reasons
     assert "noisy_name" in report.issues[0].reasons
+
+
+def test_tutor_data_audit_can_load_sample_file(tmp_path):
+    import json
+
+    from scripts.audit_tutor_data import audit_tutor_data, report_to_dict
+
+    sample_path = tmp_path / "sample.json"
+    sample_path.write_text(
+        json.dumps(
+            [{"name": "张三", "institution": "示例大学", "department": "计算机学院", "homepage": "https://cs.example.edu.cn/teacher/zhangsan", "research_areas": ["人工智能"], "summary": "张三教授研究方向为人工智能。"}],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    payload = report_to_dict(audit_tutor_data(str(sample_path)))
+
+    assert payload["total"] == 1
+    assert payload["valid"] == 1
+    assert payload["valid_ratio"] == 1.0
+    assert payload["quality_passed"] is True
 
 
 def test_clean_invalid_tutors_dry_run(monkeypatch):

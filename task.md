@@ -428,6 +428,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 1. **分离 demo seed 与真实公开数据样本** `[已完成第一版]`
    - `data/sample/faculty_seed.json` 继续作为离线演示 seed，不再用它证明真实采集能力。
    - 新增 `data/sample/real_faculty_sample.json`，保存 3 条公开华科教师主页样本：曹忠升、陈汉华、班鹏新。
+   - `scripts/audit_tutor_data.py` 已支持 `--sample` 和 `--min-valid-ratio`，可直接对真实样本文件执行质量门禁；当前真实样本 `valid_ratio=1.0`。
 2. **建立真实导师 benchmark 第一版** `[已完成第一版]`
    - 新增 `data/sample/real_rag_eval.json`，覆盖华科教师平台 dry-run 已发现的真实候选。
    - 评估问题围绕真实页面能证明的方向，例如数据库、多媒体、大数据、计算机学院、武汉等。
@@ -447,7 +448,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 6. Query Rewriter / 搜索域限制 / 搜索结果过滤器已完成第一版，后续升级 multi-query retrieval 与 search planning。
 7. Browser Agent 已支持搜索页 → 学院/师资页 → 导师主页；后续继续增强分页、教师平台子页面、论文页和招生页抓取。
-8. RAG 已支持 hybrid / reranker / evaluation；真实样本第一版已能量化 top-1 相关性和候选相关词覆盖，后续重点扩大真实高校/导师样本覆盖率。
+8. RAG 已支持 hybrid / reranker / evaluation；真实样本第一版已能量化 top-1 相关性和候选相关词覆盖，并可用审计脚本对样本文件做质量门禁，后续重点扩大真实高校/导师样本覆盖率。
 9. 前端、Trace、Memory、Docker、配置上限、审计和质量报告已完成第一版，后续围绕真实数据展示质量证据。
 
 原因：
