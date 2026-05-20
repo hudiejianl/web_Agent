@@ -35,10 +35,13 @@ pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius:
 .answer { min-height: 220px; }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
 .action-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.panel-note { margin: 0 0 12px; color: var(--muted); line-height: 1.6; }
+.url-actions { margin-top: 12px; }
 .seed-sites { margin: 12px 0; }
 .seed-sites h3 { margin: 0 0 8px; }
 .seed-empty { margin: 10px 0; }
 .quality-report { margin: 12px 0; }
+.url-preview-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: #f8fafc; }
 .quality-report h3 { margin: 0 0 8px; }
 .quality-report small { display: block; color: var(--muted); margin-top: 6px; }
 .url-text { word-break: break-all; }

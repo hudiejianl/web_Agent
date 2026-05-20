@@ -3,14 +3,18 @@ import './App.css'
 
 const defaultMessage = '我想申请 AI 和 RAG 方向硕士，偏好江浙沪，帮我推荐导师。'
 const defaultResearchQuery = '武汉 多模态 人工智能 导师 个人主页'
+const defaultTutorUrl = 'https://cs.example.edu.cn/teacher/zhangsan'
 
 function App() {
   const [sessionId] = useState(() => localStorage.getItem('sessionId') || crypto.randomUUID())
   const [message, setMessage] = useState(defaultMessage)
   const [researchQuery, setResearchQuery] = useState(defaultResearchQuery)
+  const [tutorUrl, setTutorUrl] = useState(defaultTutorUrl)
   const [navigationDepth, setNavigationDepth] = useState(3)
   const [maxNavigationPages, setMaxNavigationPages] = useState(8)
   const [chatResult, setChatResult] = useState(null)
+  const [urlPreviewResult, setUrlPreviewResult] = useState(null)
+  const [urlIngestResult, setUrlIngestResult] = useState(null)
   const [researchResult, setResearchResult] = useState(null)
   const [seedSites, setSeedSites] = useState(null)
   const [ragDataset, setRagDataset] = useState(null)
@@ -72,6 +76,40 @@ function App() {
       const query = encodeURIComponent(researchQuery)
       const data = await requestJson(`/api/browser/seed-sites?q=${query}&limit=6`)
       setSeedSites(data.sites || [])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading('')
+    }
+  }
+
+  async function previewTutorUrl() {
+    setLoading('url-preview')
+    try {
+      const data = await requestJson('/api/ingest/url/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: tutorUrl }),
+      })
+      setUrlPreviewResult(data)
+      setActiveTab('tutors')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading('')
+    }
+  }
+
+  async function ingestTutorUrl() {
+    setLoading('url-ingest')
+    try {
+      const data = await requestJson('/api/ingest/url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: tutorUrl }),
+      })
+      setUrlIngestResult(data)
+      setActiveTab('tutors')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -150,6 +188,22 @@ function App() {
         </section>
 
         <section className="panel">
+          <h2>导师主页 URL 采集</h2>
+          <p className="panel-note">先预检质量再入库，避免无效页面污染导师库。</p>
+          <input value={tutorUrl} onChange={(event) => setTutorUrl(event.target.value)} placeholder="https://..." />
+          <div className="action-row url-actions">
+            <button type="button" className="ghost" onClick={previewTutorUrl} disabled={loading === 'url-preview'}>
+              {loading === 'url-preview' ? '预检中...' : '仅预检不入库'}
+            </button>
+            <button type="button" className="secondary" onClick={ingestTutorUrl} disabled={loading === 'url-ingest'}>
+              {loading === 'url-ingest' ? '入库中...' : '采集并入库'}
+            </button>
+          </div>
+          <UrlPreviewCard data={urlPreviewResult} />
+          <pre>{urlIngestResult ? JSON.stringify({ indexed: urlIngestResult.indexed, tutor: urlIngestResult.tutor?.name }, null, 2) : '暂无 URL 入库结果'}</pre>
+        </section>
+
+        <section className="panel">
           <h2>Autonomous Browser Research</h2>
           <textarea value={researchQuery} rows={3} onChange={(event) => setResearchQuery(event.target.value)} />
           <div className="field-grid">
@@ -214,7 +268,7 @@ function App() {
         {activeTab === 'memory' && <JsonView data={chatResult?.memory || {}} />}
         {activeTab === 'handoffs' && <HandoffView items={chatResult?.agent_handoffs || []} />}
         {activeTab === 'candidates' && <CandidateView items={researchResult?.candidates || []} />}
-        {activeTab === 'tutors' && <TutorView items={[...(chatResult?.tutors || []), ...(researchResult?.tutors || [])]} />}
+        {activeTab === 'tutors' && <TutorView items={[...(chatResult?.tutors || []), ...(urlPreviewResult?.tutor ? [urlPreviewResult.tutor] : []), ...(urlIngestResult?.tutor ? [urlIngestResult.tutor] : []), ...(researchResult?.tutors || [])]} />}
       </section>
     </div>
   )
@@ -333,6 +387,23 @@ function SeedSitePreview({ sites }) {
           <p className="url-text">{site.url}</p>
         </article>
       ))}
+    </div>
+  )
+}
+
+function UrlPreviewCard({ data }) {
+  if (!data) return <p className="empty seed-empty">暂无 URL 预检结果</p>
+  return (
+    <div className="quality-report url-preview-card">
+      <h3>URL 预检结果 · {data.ingest_eligible ? '可入库' : '不建议入库'}</h3>
+      <div className="stats rag-stats">
+        <Stat label="档案质量" value={Number(data.profile_quality_score || 0).toFixed(2)} />
+        <Stat label="页面质量" value={Number(data.page_quality || 0).toFixed(2)} />
+        <Stat label="可入库" value={data.ingest_eligible ? '是' : '否'} danger={!data.ingest_eligible} />
+        <Stat label="已写库" value={data.indexed ? '是' : '否'} />
+      </div>
+      <small>导师：{data.tutor?.name || '未识别'} · {data.tutor?.institution || '未知机构'} · {data.tutor?.research_areas?.join('、') || '未识别方向'}</small>
+      <small className={data.ingest_eligible ? 'quality-pass' : 'quality-reject'}>质量说明：{data.quality_reasons?.join('、') || '无'}</small>
     </div>
   )
 }

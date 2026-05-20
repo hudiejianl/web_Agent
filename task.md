@@ -406,6 +406,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 增强内置前端工作流 UI：展示 Plan / Trace / Evidence / Memory、Browser Research 深链路候选和导航参数。
    - [x] 增加独立 React / Vite 前端工程，可连接 FastAPI API 展示工作流 UI。
    - [x] 两套前端均支持预览高校种子入口、匹配原因和匹配词。
+   - [x] 两套前端均支持单个导师主页 URL 预检和采集入库。
    - [x] 增加端到端演示检查脚本，覆盖 health、chat、seed-sites 和 RAG Evaluation。
    - [x] 增加导师数据质量审计和无效数据清理脚本。
    - [x] 可选接入 LangSmith 或 OpenTelemetry。
@@ -458,7 +459,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 24. Browser Research 候选质量报告：API 返回质量统计、拒绝原因分布和最高分候选，React 前端展示质量报告面板。`[已完成]`
 25. Browser Research 质量检查脚本：新增 `scripts/browser_quality_check.py`，对运行中的服务执行 dry-run 质量检查并基于合格候选数和平均质量分判定是否通过。`[已完成]`
 26. 手动 URL 采集质量门控：`/api/ingest/url` 复用导师档案质量评分，拒绝搜索页、噪声页和缺少证据的低质量页面，避免绕过 Browser Research 门控污染导师库。`[已完成]`
-27. 单 URL 采集预检：新增 `/api/ingest/url/preview` 和内置前端“仅预检不入库”按钮，可先查看页面质量、档案质量分和拒绝原因再决定是否入库。`[已完成]`
+27. 单 URL 采集预检：新增 `/api/ingest/url/preview` 和两套前端“仅预检不入库”入口，可先查看页面质量、档案质量分和拒绝原因再决定是否入库。`[已完成]`
 
 原因：
 
