@@ -81,6 +81,25 @@ class TutorProfile(BaseModel):
         )
 
 
+class TutorQualityIssue(BaseModel):
+    name: str
+    homepage: str = ""
+    reasons: list[str] = Field(default_factory=list)
+
+
+class TutorAuditResponse(BaseModel):
+    total: int = 0
+    valid: int = 0
+    invalid: int = 0
+    duplicate_names: list[str] = Field(default_factory=list)
+    missing_research_areas: list[str] = Field(default_factory=list)
+    missing_homepage: list[str] = Field(default_factory=list)
+    locations: dict[str, int] = Field(default_factory=dict)
+    institutions: dict[str, int] = Field(default_factory=dict)
+    issues: list[TutorQualityIssue] = Field(default_factory=list)
+    quality_passed: bool = True
+
+
 class UserProfile(BaseModel):
     research_interests: list[str] = Field(default_factory=list)
     preferred_locations: list[str] = Field(default_factory=list)

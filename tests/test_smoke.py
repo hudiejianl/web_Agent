@@ -224,6 +224,25 @@ def test_ingest_url_preview_endpoint(monkeypatch):
     assert payload["tutor"]["name"] == "张三"
 
 
+def test_tutor_audit_endpoint(monkeypatch):
+    from app.models.schemas import TutorProfile
+    from scripts import audit_tutor_data
+
+    valid = TutorProfile(name="张三", institution="示例大学", department="计算机学院", homepage="https://cs.example.edu.cn/teacher/zhangsan", research_areas=["人工智能"], summary="张三教授研究方向为人工智能。")
+    noisy = TutorProfile(name="未知导师", institution="未知机构", homepage="https://www.bing.com/search?q=demo", summary="bing 未知")
+    monkeypatch.setattr(audit_tutor_data, "load_profiles", lambda: [valid, noisy])
+
+    response = TestClient(app).get("/api/tutors/audit")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 2
+    assert payload["valid"] == 1
+    assert payload["invalid"] == 1
+    assert payload["quality_passed"] is False
+    assert payload["issues"][0]["name"] == "未知导师"
+
+
 def test_demo_check_runs_core_endpoints(monkeypatch):
     from scripts import demo_check
 

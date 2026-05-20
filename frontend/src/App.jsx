@@ -20,6 +20,7 @@ function App() {
   const [ragDataset, setRagDataset] = useState(null)
   const [ragComparison, setRagComparison] = useState(null)
   const [ragConfigurations, setRagConfigurations] = useState(null)
+  const [tutorAudit, setTutorAudit] = useState(null)
   const [capabilities, setCapabilities] = useState(null)
   const [activeTab, setActiveTab] = useState('plan')
   const [loading, setLoading] = useState('')
@@ -110,6 +111,17 @@ function App() {
       })
       setUrlIngestResult(data)
       setActiveTab('tutors')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading('')
+    }
+  }
+
+  async function loadTutorAudit() {
+    setLoading('tutor-audit')
+    try {
+      setTutorAudit(await requestJson('/api/tutors/audit'))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -248,6 +260,8 @@ function App() {
         onLoad={loadRagEvaluation}
       />
 
+      <TutorAuditPanel data={tutorAudit} loading={loading === 'tutor-audit'} onLoad={loadTutorAudit} />
+
       <section className="panel">
         <nav className="tabs">
           {[
@@ -297,6 +311,38 @@ function CapabilityPanel({ data }) {
       <ul className="next-steps">
         {data.next_recommended_steps.map((item) => <li key={item}>{item}</li>)}
       </ul>
+    </section>
+  )
+}
+
+function TutorAuditPanel({ data, loading, onLoad }) {
+  const issues = data?.issues || []
+  return (
+    <section className="panel audit-panel">
+      <div className="panel-heading">
+        <div>
+          <h2>导师数据质量审计</h2>
+          <p>检查当前 SQLite 导师库是否存在搜索页、噪声姓名、缺少主页或缺少研究方向等无效数据。</p>
+        </div>
+        <button type="button" onClick={onLoad} disabled={loading}>{loading ? '审计中...' : '运行审计'}</button>
+      </div>
+      {data ? (
+        <>
+          <div className="stats rag-stats">
+            <Stat label="总数" value={data.total} />
+            <Stat label="有效" value={data.valid} />
+            <Stat label="无效" value={data.invalid} danger={data.invalid > 0} />
+            <Stat label="通过" value={data.quality_passed ? '是' : '否'} danger={!data.quality_passed} />
+          </div>
+          <small>地区分布：{formatCounts(data.locations)} · 机构分布：{formatCounts(data.institutions)}</small>
+          <small>重复姓名：{data.duplicate_names?.join('、') || '无'} · 缺少方向：{data.missing_research_areas?.join('、') || '无'} · 缺少主页：{data.missing_homepage?.join('、') || '无'}</small>
+          {issues.length ? (
+            <div className="audit-issues">
+              {issues.slice(0, 8).map((item) => <article className="card" key={`${item.name}-${item.homepage}`}><strong>{item.name}</strong><p className="url-text">{item.homepage || '无主页'}</p><small>{item.reasons.join('、')}</small></article>)}
+            </div>
+          ) : <p className="empty audit-empty">未发现无效导师数据</p>}
+        </>
+      ) : <p className="empty audit-empty">暂无审计结果</p>}
     </section>
   )
 }

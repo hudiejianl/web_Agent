@@ -409,6 +409,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
    - [x] 两套前端均支持单个导师主页 URL 预检和采集入库。
    - [x] 增加端到端演示检查脚本，覆盖 health、chat、seed-sites 和 RAG Evaluation。
    - [x] 增加导师数据质量审计和无效数据清理脚本。
+- [x] 增加 `GET /api/tutors/audit` 数据质量审计接口和 React 审计面板。
    - [x] 可选接入 LangSmith 或 OpenTelemetry。
 
 ---
@@ -460,6 +461,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 25. Browser Research 质量检查脚本：新增 `scripts/browser_quality_check.py`，对运行中的服务执行 dry-run 质量检查并基于合格候选数和平均质量分判定是否通过。`[已完成]`
 26. 手动 URL 采集质量门控：`/api/ingest/url` 复用导师档案质量评分，拒绝搜索页、噪声页和缺少证据的低质量页面，避免绕过 Browser Research 门控污染导师库。`[已完成]`
 27. 单 URL 采集预检：新增 `/api/ingest/url/preview` 和两套前端“仅预检不入库”入口，可先查看页面质量、档案质量分和拒绝原因再决定是否入库。`[已完成]`
+28. 导师数据质量审计 API：新增 `GET /api/tutors/audit` 和 React 审计面板，可查看当前导师库有效/无效数量、缺失项、地区/机构分布和无效记录原因。`[已完成]`
 
 原因：
 

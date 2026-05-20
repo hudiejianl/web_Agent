@@ -52,8 +52,11 @@ pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; border-radius:
 .workflow { margin-top: 20px; }
 .panel-heading { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
 .panel-heading p { margin: 4px 0 0; color: var(--muted); line-height: 1.6; }
-.rag-panel { margin-top: 20px; }
+.rag-panel, .audit-panel { margin-top: 20px; }
 .rag-stats { margin: 14px 0; }
+.audit-panel small { display: block; color: var(--muted); margin-top: 6px; }
+.audit-issues { margin-top: 12px; }
+.audit-empty { margin-top: 12px; }
 .eval-section { margin-top: 16px; }
 .eval-section h3 { margin: 0 0 8px; }
 .eval-table { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }

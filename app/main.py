@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app.agents.browser_agent import BrowserAgent
 from app.config import get_settings
 from app.logging_config import configure_logging
-from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlPreviewResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGBenchmarkDatasetSummary, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, SystemCapabilitiesResponse, SystemCapability, TraceRunResponse, UniversitySeedSiteResponse
+from app.models.schemas import AgentPlanRun, AgentTraceRun, BrowserBrowseRequest, BrowserBrowseResponse, BrowserResearchRequest, BrowserResearchResponse, ChatRequest, ChatResponse, IngestUrlPreviewResponse, IngestUrlRequest, IngestUrlResponse, PlanRunResponse, RAGBenchmarkDatasetSummary, RAGConfigurationComparisonResponse, RAGEvaluationComparisonResponse, RAGEvaluationReportResponse, RAGEvaluationResponse, RAGEvaluationRun, RAGEvaluationRunResponse, SearchResponse, SystemCapabilitiesResponse, SystemCapability, TraceRunResponse, TutorAuditResponse, UniversitySeedSiteResponse
 from app.observability import configure_observability, request_span
 from app.eval.rag_eval import RAGEvaluator
 from app.rag.retriever import TutorRetriever
@@ -24,6 +24,7 @@ from app.services.ingestion import IngestionService, ProfileQualityError, ensure
 from app.services.seed_sites import UniversitySeedSiteService
 from app.storage.database import init_database
 from app.storage.repositories import MemoryRepository, PlanRepository, RAGEvaluationRepository, TraceRepository
+from scripts import audit_tutor_data
 
 configure_logging()
 settings = get_settings()
@@ -162,6 +163,12 @@ def browser_seed_sites(q: str = "", limit: int = 20) -> UniversitySeedSiteRespon
 @app.get("/api/tutors/search", response_model=SearchResponse)
 def search_tutors(q: str, limit: int = 5) -> SearchResponse:
     return SearchResponse(tutors=TutorRetriever().search(q, limit=limit))
+
+
+@app.get("/api/tutors/audit", response_model=TutorAuditResponse)
+def audit_tutors() -> TutorAuditResponse:
+    report = audit_tutor_data.audit_profiles(audit_tutor_data.load_profiles())
+    return TutorAuditResponse.model_validate(audit_tutor_data.report_to_dict(report))
 
 
 @app.get("/api/eval/rag", response_model=RAGEvaluationResponse)
