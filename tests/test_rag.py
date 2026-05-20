@@ -245,6 +245,25 @@ def test_reranker_prioritizes_query_aligned_profiles():
     assert [profile.id for profile in results] == ["aligned", "generic"]
 
 
+def test_reranker_uses_real_profile_constraints_for_hust_samples():
+    from app.storage.repositories import load_tutors_from_json
+
+    profiles = load_tutors_from_json("data/sample/real_faculty_sample.json")
+    for index, profile in enumerate(profiles):
+        profile.id = profile.name or f"real-{index}"
+    reranker = TutorReranker()
+
+    cases = {
+        "武汉 华中科技大学 计算机学院 数据库 多媒体方向导师": "曹忠升",
+        "华科 计算机学院 大数据处理方向博士生导师": "陈汉华",
+        "华中科技大学 计算机软件与理论 数据库 多媒体 硕士生导师": "班鹏新",
+    }
+
+    for query, expected_name in cases.items():
+        results = reranker.rerank(query, profiles, limit=3)
+        assert results[0].name == expected_name
+
+
 def test_rag_evaluator_computes_metrics():
     expected = TutorProfile(id="expected", name="李若水", institution="上海交通大学", research_areas=["RAG", "智能体系统"], summary="RAG 和智能体系统")
 

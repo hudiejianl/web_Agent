@@ -397,6 +397,9 @@ def test_retrieval_quality_distinguishes_noise_from_valid_extra(monkeypatch):
     assert report.avg_precision == 0.3333
     assert report.interference_case_count == 1
     assert report.exact_match_case_count == 1
+    assert report.top1_hit_rate == 1.0
+    assert result.rank_of_first_hit == 1
+    assert result.top1_hit is True
     assert result.hit_tutor_names == ["张三"]
     assert result.extra_valid_tutor_names == ["李四"]
     assert result.interference_tutor_names == ["噪声"]
@@ -432,7 +435,9 @@ def test_retrieval_quality_can_use_isolated_real_sample(tmp_path):
 
     assert report.case_count == 1
     assert report.avg_recall == 1.0
+    assert report.top1_hit_rate == 1.0
     assert report.interference_case_count == 0
+    assert report.result[0].rank_of_first_hit == 1
     assert report.result[0].hit_tutor_names == ["曹忠升"]
 
 

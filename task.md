@@ -437,15 +437,16 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 4. **继续使用 dry-run 作为真实采集前置门禁** `[已完成第一版]`
    - 写入真实库前必须先查看候选质量报告，确认候选是导师个人主页且包含姓名、机构、研究方向或其它证据。
    - 不把搜索页、栏目页、教师列表页、新闻页、百科页写入导师库。
-5. **补充 profile-level relevance** `[下一步]`
-   - 当前质量评分证明“是不是导师主页”，还需要进一步判断“是否匹配用户查询方向”。
-   - 例如“武汉 多模态 人工智能”召回数据库/多媒体导师时，应标为有效导师但相关性有限。
+5. **补充 profile-level relevance** `[已完成第一版]`
+   - 本地 reranker 已增强院校别名、导师类型、职称、学科方向和精确短语权重，降低宽泛关键词覆盖导致的排序偏差。
+   - `scripts/evaluate_retrieval_quality.py` 已输出 `top1_hit_rate`、`rank_of_first_hit` 和 `--min-top1-hit-rate` 门禁，能量化“召回正确但排序不准”。
+   - 真实 HUST 样本隔离 benchmark 当前 3 个用例 top-1 全部命中预期导师，`avg_recall=1.0`、`top1_hit_rate=1.0`、`avg_rank_of_first_hit=1.0`、`interference_case_count=0`。
 
 ### 后续增强方向
 
 6. Query Rewriter / 搜索域限制 / 搜索结果过滤器已完成第一版，后续升级 multi-query retrieval 与 search planning。
 7. Browser Agent 已支持搜索页 → 学院/师资页 → 导师主页；后续继续增强分页、教师平台子页面、论文页和招生页抓取。
-8. RAG 已支持 hybrid / reranker / evaluation；后续重点改为真实 benchmark 覆盖率和真实数据检索相关性。
+8. RAG 已支持 hybrid / reranker / evaluation；真实样本第一版已能量化 top-1 相关性，后续重点扩大真实 benchmark 覆盖率。
 9. 前端、Trace、Memory、Docker、配置上限、审计和质量报告已完成第一版，后续围绕真实数据展示质量证据。
 
 原因：
