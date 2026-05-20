@@ -9,7 +9,7 @@ from app.llm.provider import get_llm_client
 from app.models.schemas import Evidence, Paper, TutorProfile
 
 
-AREA_KEYWORDS = ["人工智能", "机器学习", "深度学习", "大模型", "自然语言处理", "信息检索", "软件工程", "程序分析", "医学影像", "数据挖掘", "计算机视觉"]
+AREA_KEYWORDS = ["人工智能", "机器学习", "深度学习", "大模型", "自然语言处理", "信息检索", "软件工程", "程序分析", "医学影像", "数据挖掘", "计算机视觉", "数据库", "数据管理", "数据分析", "多媒体", "云计算", "大数据", "电子政务"]
 
 
 class ResearchAgent:
@@ -79,10 +79,13 @@ class ResearchAgent:
         return json.loads(stripped[start : end + 1])
 
     def _guess_name(self, title: str, text: str) -> str:
-        for pattern in [r"姓名[:：]\s*([一-龥]{2,4})", r"([一-龥]{2,4})\s*(教授|副教授|研究员)"]:
-            match = re.search(pattern, text)
+        for pattern in [r"姓名[:：]\s*([一-龥]{2,4})", r"^\s*([一-龥]{2,4})\s*$", r"([一-龥]{2,4})\s*(教授|副教授|研究员|讲师|硕士生导师|博士生导师)"]:
+            match = re.search(pattern, text, flags=re.MULTILINE)
             if match:
                 return match.group(1)
+        title_match = re.search(r"([一-龥]{2,4})", title)
+        if title_match:
+            return title_match.group(1)
         return title.split("-")[0].split("_")[0].strip()[:20] or "未知导师"
 
     def _guess_title(self, text: str) -> str | None:
@@ -92,6 +95,8 @@ class ResearchAgent:
         return None
 
     def _guess_institution(self, text: str) -> str:
+        if "华中科技大学" in text:
+            return "华中科技大学"
         match = re.search(r"([一-龥]{2,20}(大学|学院|研究所))", text)
         return match.group(1) if match else "未知机构"
 

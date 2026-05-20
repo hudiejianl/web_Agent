@@ -121,6 +121,24 @@ def test_clean_invalid_tutors_dry_run(monkeypatch):
     assert result["remaining_report"]["quality_passed"] is True
 
 
+def test_research_agent_structures_hust_faculty_profile_without_llm():
+    from app.agents.research_agent import ResearchAgent
+
+    page = {
+        "url": "http://faculty.hust.edu.cn/caozhongsheng/zh_CN/index.htm",
+        "title": "华中科技大学主页平台管理系统 曹忠升--中文主页--首页",
+        "text": "曹忠升\n个人信息\n副教授 硕士生导师\n所在单位：计算机科学与技术学院\n毕业院校：华中科技大学\n主要从事数据库管理系统、多媒体处理技术、云计算与大数据技术等方面的研究工作。\n研究方向\n现代数据库技术团队",
+        "links": [],
+    }
+
+    profile = ResearchAgent().structure_faculty_page(page)
+
+    assert profile.name == "曹忠升"
+    assert profile.institution == "华中科技大学"
+    assert profile.department == "计算机科学与技术学院"
+    assert {"数据库", "多媒体", "云计算", "大数据"} <= set(profile.research_areas)
+
+
 def test_ingest_url_rejects_noisy_profile(monkeypatch):
     from app.agents.browser_agent import BrowserAgent
     from app.services.ingestion import IngestionService, ProfileQualityError
@@ -331,6 +349,41 @@ def test_browser_quality_check_fails_low_quality(monkeypatch):
 
     with pytest.raises(browser_quality_check.BrowserQualityCheckError):
         browser_quality_check.run_browser_quality_check("http://server.local/", "武汉 多模态", min_eligible=1, min_average_quality=0.2)
+
+
+def test_retrieval_quality_distinguishes_noise_from_valid_extra(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.models.schemas import TutorProfile
+    from scripts import evaluate_retrieval_quality
+
+    expected = TutorProfile(name="张三", institution="示例大学", department="计算机学院", homepage="https://cs.example.edu.cn/teacher/zhangsan", research_areas=["人工智能"])
+    valid_extra = TutorProfile(name="李四", institution="示例大学", department="计算机学院", homepage="https://cs.example.edu.cn/teacher/lisi", research_areas=["大模型"])
+    noisy = TutorProfile(name="噪声", institution="未知机构", homepage="https://www.bing.com/search?q=demo", summary="bing 未知")
+
+    class FakeEvaluator:
+        def load_cases(self):
+            return [SimpleNamespace(id="case-1", query="人工智能 导师", expected_tutor_names=["张三"])]
+
+    class FakeRetriever:
+        def search(self, query, limit=5, strategy="reranker"):
+            return [expected, valid_extra, noisy]
+
+    monkeypatch.setattr(evaluate_retrieval_quality, "RAGEvaluator", FakeEvaluator)
+    monkeypatch.setattr(evaluate_retrieval_quality, "TutorRetriever", FakeRetriever)
+    monkeypatch.setattr(evaluate_retrieval_quality, "quality_reasons", lambda profile: ["invalid_source_url"] if profile.name == "噪声" else [])
+
+    report = evaluate_retrieval_quality.evaluate_retrieval_quality(limit=3, strategy="reranker")
+    result = report.result[0]
+
+    assert report.avg_recall == 1.0
+    assert report.avg_precision == 0.3333
+    assert report.interference_case_count == 1
+    assert report.exact_match_case_count == 1
+    assert result.hit_tutor_names == ["张三"]
+    assert result.extra_valid_tutor_names == ["李四"]
+    assert result.interference_tutor_names == ["噪声"]
+    assert "噪声: invalid_source_url" in result.notes
 
 
 def test_health():
@@ -653,6 +706,44 @@ def test_api_errors_have_consistent_shape():
     assert response.json() == {"error": "http_error", "detail": "Trace not found", "request_id": "missing-trace-request"}
 
 
+def test_browser_agent_prioritizes_teacher_links_over_navigation():
+    from bs4 import BeautifulSoup
+
+    from app.agents.browser_agent import BrowserAgent
+
+    html = "<html><body>" + "".join(f'<a href="/nav/{index}">导航{index}</a>' for index in range(140)) + '<a href="/info/1439/3133.htm">张三</a></body></html>'
+    links = BrowserAgent()._extract_links(BeautifulSoup(html, "html.parser"), "https://cs.example.edu.cn/szdw/jsml.htm")
+
+    assert links[0] == {"text": "张三", "url": "https://cs.example.edu.cn/info/1439/3133.htm"}
+    assert any(link["text"] == "张三" for link in links)
+
+
+def test_browser_agent_uses_apparent_encoding_for_chinese_pages(monkeypatch):
+    from app.agents.browser_agent import BrowserAgent
+
+    html = '<html><head><title>教师名录</title></head><body><a href="/teacher/zhangsan">张三</a>研究方向 人工智能</body></html>'
+
+    class FakeResponse:
+        encoding = "ISO-8859-1"
+        apparent_encoding = "utf-8"
+        url = "https://cs.example.edu.cn"
+
+        def raise_for_status(self):
+            return None
+
+        @property
+        def text(self):
+            return html.encode("utf-8").decode(self.encoding)
+
+    monkeypatch.setattr("app.agents.browser_agent.requests.get", lambda *args, **kwargs: FakeResponse())
+
+    page = BrowserAgent().fetch("https://cs.example.edu.cn")
+
+    assert page["title"] == "教师名录"
+    assert page["links"][0]["text"] == "张三"
+    assert "人工智能" in page["text"]
+
+
 def test_browser_agent_retries_and_classifies_timeout(monkeypatch):
     from app.agents.browser_agent import BrowserAgent, BrowserFetchError
 
@@ -819,6 +910,31 @@ def test_browser_research_scores_page_quality_and_confidence():
 
     assert high_quality > 0.7
     assert candidate.confidence > 0.7
+
+
+def test_browser_research_identifies_named_teacher_links_as_profiles():
+    from app.services.browser_research import BrowserResearchService
+
+    service = BrowserResearchService()
+
+    assert service._navigation_link_type("https://cs.example.edu.cn/info/1439/3133.htm", "张三") == "profile"
+    assert service._navigation_link_type("https://cs.example.edu.cn/info/1439/3133.htm", "张三 教授") == "profile"
+    assert service._navigation_link_type("https://cs.example.edu.cn/szdw/jsml/axmpyszmlb.htm", "教师名录") == "faculty_list"
+
+
+def test_browser_research_ranks_profile_before_navigation_pages():
+    from app.models.schemas import CandidateLink
+    from app.services.browser_research import BrowserResearchService
+
+    school = CandidateLink(text="首页", url="https://cs.example.edu.cn/", score=10.0, confidence=0.9, link_type="school")
+    faculty_list = CandidateLink(text="教师名录", url="https://cs.example.edu.cn/szdw/jsml.htm", score=10.0, confidence=0.9, link_type="faculty_list")
+    profile = CandidateLink(text="张三", url="https://cs.example.edu.cn/info/1439/3133.htm", score=5.0, confidence=0.5, link_type="profile")
+    faculty_profile = CandidateLink(text="李四", url="http://faculty.example.edu.cn/lisi/zh_CN/index.htm", score=5.0, confidence=0.5, link_type="profile")
+
+    ranked = BrowserResearchService()._rank_candidates([school, faculty_list, profile, faculty_profile])
+
+    assert ranked[0].url == faculty_profile.url
+    assert ranked[1].url == profile.url
 
 
 def test_browser_research_follows_deep_navigation_chain(monkeypatch):

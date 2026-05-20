@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import sys
 import time
 from urllib.parse import urljoin
@@ -54,6 +55,8 @@ class BrowserAgent:
             try:
                 response = requests.get(url, timeout=settings.request_timeout_seconds, headers={"User-Agent": "AdmissionResearchAgent/0.1"})
                 response.raise_for_status()
+                if not response.encoding or response.encoding.lower() in {"iso-8859-1", "latin-1"}:
+                    response.encoding = response.apparent_encoding or "utf-8"
                 html = response.text
                 soup = BeautifulSoup(html, "html.parser")
                 title = soup.title.get_text(strip=True) if soup.title else url
@@ -140,12 +143,28 @@ class BrowserAgent:
 
     def _extract_links(self, soup: BeautifulSoup, base_url: str) -> list[dict[str, str]]:
         links = []
-        for anchor in soup.find_all("a", href=True)[:80]:
+        seen = set()
+        for anchor in soup.find_all("a", href=True)[:300]:
             label = anchor.get_text(" ", strip=True)
             href = urljoin(base_url, anchor["href"])
-            if label and href.startswith("http"):
+            key = (label, href)
+            if label and href.startswith("http") and key not in seen:
+                seen.add(key)
                 links.append({"text": label[:120], "url": href})
-        return links
+        return sorted(links, key=self._link_priority, reverse=True)[:120]
+
+    def _link_priority(self, link: dict[str, str]) -> tuple[int, int]:
+        text = link.get("text", "").strip()
+        lower = f"{text} {link.get('url', '')}".lower()
+        if re.search(r"[一-龥]{2,4}\s*(教授|副教授|讲师|研究员|博导|硕导)", text) or re.fullmatch(r"[一-龥]{2,4}", text):
+            return (4, len(text))
+        if any(token in lower for token in ["个人主页", "教师简介", "导师简介", "teacherinfo", "profile", "person"]):
+            return (3, len(text))
+        if any(token in lower for token in ["师资队伍", "教师名录", "教师队伍", "faculty", "teacher", "staff", "people"]):
+            return (2, len(text))
+        if any(token in lower for token in ["学院", "department", "college", "school"]):
+            return (1, len(text))
+        return (0, len(text))
 
     def _summarize_dom(self, soup: BeautifulSoup) -> dict[str, object]:
         headings = []

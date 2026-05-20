@@ -285,6 +285,8 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 支持 Browser Research dry-run 预检模式：只浏览、结构化和评分候选导师，不写入 SQLite / ChromaDB
 - [x] 支持候选质量报告：统计候选总数、可入库数、拒绝数、平均质量分、状态/类型/拒绝原因分布和最高分候选
 - [x] 两套前端展示候选页面质量、档案质量分、是否可入库和拒绝原因，并提供“仅预检不入库”入口
+- [x] Browser Research 真实 dry-run 已能从华科计算机教师名录发现真实教师个人主页，并在不入库模式下识别 3 个合格候选：曹忠升、陈汉华、班鹏新
+- [x] 修复中文高校页面编码识别、教师名录纯姓名链接优先级、真实教师平台主页姓名/机构/研究方向抽取，避免师资栏目页抢占候选名额
 - [x] 保持内置 Playwright Browser Agent，不额外引入 Browser Use / Stagehand，避免增加复杂依赖
 
 当前限制：
@@ -293,6 +295,7 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - 候选链接筛选仍是启发式规则打分
 - 批量浏览默认限制候选数量，避免对公开网站造成过高请求压力
 - 不保证所有高校页面都能被静态或 Playwright 正确解析
+- 当前真实 dry-run 只证明公开华科教师平台链路可发现并预检合格导师主页；是否写入真实库仍应先 dry-run 审核质量报告
 
 当前不会做：
 
@@ -333,6 +336,8 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 - [x] 对比不同 chunk size
 - [x] 对比有无 reranker / hybrid retrieval
 - [x] 输出评估报告
+- [x] 新增检索结果质量评估脚本，区分命中导师、有效但非预期导师和真实干扰项，并用审计规则判断检索结果是否混入噪声
+- [x] 当前本地 RAG benchmark 6 个用例 top-1 全部命中预期导师，平均 recall 1.0，干扰项用例数 0；但该结论基于本地 3 条 seed/demo 导师数据
 
 ---
 
@@ -462,6 +467,8 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 26. 手动 URL 采集质量门控：`/api/ingest/url` 复用导师档案质量评分，拒绝搜索页、噪声页和缺少证据的低质量页面，避免绕过 Browser Research 门控污染导师库。`[已完成]`
 27. 单 URL 采集预检：新增 `/api/ingest/url/preview` 和两套前端“仅预检不入库”入口，可先查看页面质量、档案质量分和拒绝原因再决定是否入库。`[已完成]`
 28. 导师数据质量审计 API：新增 `GET /api/tutors/audit` 和 React 审计面板，可查看当前导师库有效/无效数量、缺失项、地区/机构分布和无效记录原因。`[已完成]`
+29. 检索结果质量评估：新增 `scripts/evaluate_retrieval_quality.py`，输出每个 benchmark 的预期导师、召回导师、命中、有效额外导师和干扰项，并可用阈值失败退出。`[已完成]`
+30. 真实 Browser Research dry-run 质量验证：在不写库前提下，武汉多模态查询已从华科教师名录发现 3 个合格真实教师主页候选，证明链路能获得正确数据且质量门控会拒绝超出处理上限的候选。`[已完成]`
 
 原因：
 

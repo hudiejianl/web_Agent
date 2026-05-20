@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime
+import re
 from urllib.parse import quote_plus, urlparse
 
 from app.agents.browser_agent import BrowserAgent, BrowserFetchError
@@ -188,7 +189,7 @@ class BrowserResearchService:
                     deep_link = existing
                 if self._should_follow_navigation(deep_link, request.navigation_depth) and deep_link.url not in visited and len(visited) + len(navigation_queue) < navigation_limit:
                     navigation_queue.append(deep_link)
-        expanded = sorted(collected.values(), key=lambda item: (item.confidence, item.score), reverse=True)[: max(1, min(request.max_candidates, 20))]
+        expanded = self._rank_candidates(collected.values())[: max(1, min(request.max_candidates, 20))]
         trace.append(self._trace("Browser Agent", "discover_navigation_links", "completed", f"导航式发现新增 {discovered_count} 个候选链接，识别分页 {pagination_count} 个，深链路 {deep_count} 个"))
         return expanded
 
@@ -208,6 +209,7 @@ class BrowserResearchService:
             ingest_attempts += 1
             try:
                 page = self.browser.fetch(candidate.url, use_playwright=request.use_playwright, actions=[])
+                page = self._page_with_candidate_context(page, candidate)
                 candidate.page_quality = self._page_quality(page)
                 self._score_candidate_confidence(candidate)
                 trace.append(self._trace("Browser Agent", "browse_candidate_page", "completed", f"已打开候选主页：{candidate.url}", {"page_quality": candidate.page_quality, "confidence": candidate.confidence}))
@@ -260,6 +262,14 @@ class BrowserResearchService:
 
     def _candidate_precheck_reasons(self, candidate: CandidateLink) -> list[str]:
         return self.profile_quality.precheck_reasons(candidate.url, link_type=candidate.link_type)
+
+    def _page_with_candidate_context(self, page: dict, candidate: CandidateLink) -> dict:
+        if candidate.link_type != "profile" or not re.fullmatch(r"[一-龥]{2,4}", candidate.text.strip()):
+            return page
+        enriched = dict(page)
+        enriched["title"] = f"{candidate.text.strip()} - {page.get('title') or ''}".strip(" -")
+        enriched["text"] = f"{candidate.text.strip()}\n{page.get('text') or ''}"
+        return enriched
 
     def _mark_candidate_rejected(self, candidate: CandidateLink, reasons: list[str], status: str = "failed") -> None:
         candidate.status = status
@@ -335,10 +345,14 @@ class BrowserResearchService:
 
     def _navigation_link_type(self, url: str, text: str) -> str:
         lower = f"{text} {url}".lower()
+        if any(token in lower for token in ["sygcry", "jsml", "rczp", "bsh", "szdw/", "师资队伍", "教师名录", "实验工程人员", "博士后", "人才招聘"]):
+            return "faculty_list"
         if any(token in lower for token in ["下一页", "下页", "next", "page=", "p=", "index_", "list_"]):
             return "pagination"
         if any(token in lower for token in ["publication", "publications", "paper", "papers", "pubs", "论文", "科研成果", "学术成果", "代表论文"]):
             return "paper"
+        if self._looks_like_person_link(url, text):
+            return "profile"
         if any(token in lower for token in ["个人主页", "教师简介", "个人简介", "导师简介", "profile", "teacherinfo", "person", "tutor"]):
             return "profile"
         if any(token in lower for token in ["teacher", "faculty", "staff", "people", "师资队伍", "师资力量", "教师队伍", "教师名录", "导师队伍"]):
@@ -348,6 +362,37 @@ class BrowserResearchService:
         if any(token in lower for token in ["大学", "university", "edu.cn"]):
             return "school"
         return "other"
+
+    def _looks_like_person_link(self, url: str, text: str) -> bool:
+        stripped = text.strip()
+        lower = f"{stripped} {url}".lower()
+        if any(token in lower for token in ["教师详情", "教师介绍", "教师简介", "导师介绍", "导师简介", "个人主页", "个人简介", "teacherinfo", "person", "profile"]):
+            return True
+        if re.search(r"[一-龥]{2,4}\s*(教授|副教授|讲师|研究员|博导|硕导)", stripped):
+            return True
+        generic_labels = {"首页", "学院", "学校", "学科", "科研", "教学", "党建", "招生", "新闻", "通知", "校友", "更多", "English", "组织机构", "学院概况", "师资队伍", "教师名录", "实验工程人员", "博士后", "研究生", "本科生"}
+        if stripped in generic_labels:
+            return False
+        if re.fullmatch(r"[一-龥]{2,4}", stripped):
+            return True
+        path_parts = [part for part in urlparse(url).path.split("/") if part]
+        if path_parts and re.search(r"[a-z]+[-_]?[a-z]*\d*\.htm", path_parts[-1].lower()) and any(token in lower for token in ["teacher", "faculty", "people", "staff", "szdw", "jsml"]):
+            return True
+        return False
+
+    def _rank_candidates(self, candidates: object) -> list[CandidateLink]:
+        type_priority = {"profile": 5, "paper": 4, "faculty_list": 3, "pagination": 2, "college": 1, "school": 0}
+        return sorted(candidates, key=lambda item: (type_priority.get(item.link_type, 0), self._profile_candidate_priority(item), item.confidence, item.score, item.page_quality), reverse=True)
+
+    def _profile_candidate_priority(self, candidate: CandidateLink) -> int:
+        lower = f"{candidate.text} {candidate.url}".lower()
+        if candidate.link_type != "profile":
+            return 0
+        if "faculty." in urlparse(candidate.url).netloc.lower() or any(token in lower for token in ["teacherinfo", "person", "profile", "teacher/"]):
+            return 3
+        if re.search(r"[一-龥]{2,4}", candidate.text):
+            return 2
+        return 1
 
     def _should_follow_navigation(self, candidate: CandidateLink, navigation_depth: int) -> bool:
         if candidate.depth > navigation_depth:
