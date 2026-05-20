@@ -79,13 +79,17 @@ class ResearchAgent:
         return json.loads(stripped[start : end + 1])
 
     def _guess_name(self, title: str, text: str) -> str:
+        invalid_names = {"个人信息", "中文主页", "教师主页", "科学研究", "教育经历", "工作经历", "研究方向", "团队成员", "联系方式", "其他联系", "首页", "大学主页", "平台管理", "管理系统", "教授", "副教授", "讲师", "研究员", "导师", "博导", "硕导"}
         for pattern in [r"姓名[:：]\s*([一-龥]{2,4})", r"^\s*([一-龥]{2,4})\s*$", r"([一-龥]{2,4})\s*(教授|副教授|研究员|讲师|硕士生导师|博士生导师)"]:
             match = re.search(pattern, text, flags=re.MULTILINE)
-            if match:
+            if match and match.group(1) not in invalid_names:
                 return match.group(1)
-        title_match = re.search(r"([一-龥]{2,4})", title)
-        if title_match:
-            return title_match.group(1)
+        title_name_match = re.search(r"\s([一-龥]{2,4})--", title)
+        if title_name_match and title_name_match.group(1) not in invalid_names:
+            return title_name_match.group(1)
+        title_matches = [match for match in re.findall(r"[一-龥]{2,4}", title) if match not in invalid_names and not match.endswith("大学")]
+        if title_matches:
+            return title_matches[-1]
         return title.split("-")[0].split("_")[0].strip()[:20] or "未知导师"
 
     def _guess_title(self, text: str) -> str | None:

@@ -421,58 +421,36 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 
 ## 当前推荐下一步
 
-下一阶段按 **优先级、技术收益、简历价值、Agent 含量** 排序。
+下一阶段优先做 **真实数据闭环**，目标是证明系统不只会检索自写 demo 数据，也能从公开网页获得正确导师资料并被 RAG 准确召回。
 
-### 立刻做：把“能用”升级成“真正 Agent”
+### 立刻做：真实数据闭环
 
-1. **Query Rewriter** `[已完成第一版]`
-   - 用户问题不直接搜索，先由 Agent 改写成多条面向高校/导师主页的搜索 Query。
-   - 示例：`帮我找武汉计算机方向导师` → `site:edu.cn 武汉 计算机学院 导师`、`site:hust.edu.cn 人工智能 导师`。
-   - 已实现 LLM + 规则 fallback，后续升级 query expansion / multi-query retrieval / search planning。
-2. **搜索域限制** `[已完成第一版]`
-   - 自动偏向 `edu.cn`、高校学院域名和可配置高校种子库，减少旅游、新闻、广告等无关结果。
-3. **搜索结果过滤器** `[已完成第一版]`
-   - 用规则评分保留高质量候选：`edu.cn`、`导师`、`研究方向`、`招生` 加分，`旅游`、`酒店`、`新闻` 等扣分。
-4. **继续强化 Playwright Browser Agent** `[已完成导航式采集第一版]`
-   - 当前已支持动态打开、等待、点击、滚动、DOM 抽取，并已支持搜索结果页 → 学院/师资入口页 → 导师主页的一跳导航式采集。
-   - 后续重点是更深链路：高校主页 → 学院主页 → 导师列表分页 → 导师主页 → 论文。
-5. **更强 Embedding / Hybrid Retrieval / Reranker** `[已完成 Hybrid Retrieval + 本地 Reranker 第一版]`
-   - 已增加 BM25 + Dense Retrieval 融合排序，并接入本地轻量 reranker；后续替换 hashing embedding，并接入 bge-reranker / jina-reranker。
+1. **分离 demo seed 与真实公开数据样本** `[已完成第一版]`
+   - `data/sample/faculty_seed.json` 继续作为离线演示 seed，不再用它证明真实采集能力。
+   - 新增 `data/sample/real_faculty_sample.json`，保存 3 条公开华科教师主页样本：曹忠升、陈汉华、班鹏新。
+2. **建立真实导师 benchmark 第一版** `[已完成第一版]`
+   - 新增 `data/sample/real_rag_eval.json`，覆盖华科教师平台 dry-run 已发现的真实候选。
+   - 评估问题围绕真实页面能证明的方向，例如数据库、多媒体、大数据、计算机学院、武汉等。
+3. **真实数据检索质量评估脚本** `[已完成第一版]`
+   - `scripts/evaluate_retrieval_quality.py` 支持 `--dataset` 和 `--sample`，可用真实样本做隔离评估，不污染运行库。
+   - 输出“命中真实导师 / 有效但非预期导师 / 干扰项”，并明确 demo benchmark 与真实 benchmark 的结果分别代表什么。
+4. **继续使用 dry-run 作为真实采集前置门禁** `[已完成第一版]`
+   - 写入真实库前必须先查看候选质量报告，确认候选是导师个人主页且包含姓名、机构、研究方向或其它证据。
+   - 不把搜索页、栏目页、教师列表页、新闻页、百科页写入导师库。
+5. **补充 profile-level relevance** `[下一步]`
+   - 当前质量评分证明“是不是导师主页”，还需要进一步判断“是否匹配用户查询方向”。
+   - 例如“武汉 多模态 人工智能”召回数据库/多媒体导师时，应标为有效导师但相关性有限。
 
-### 第二阶段：Workflow 与 Memory 深化
+### 后续增强方向
 
-6. Planner Agent 升级为真正任务拆解：搜索导师 → 检查论文 → 分析研究方向 → 判断是否招生 → 综合评分。`[已完成]`
-7. 长期记忆升级为 Episodic / Semantic / Procedural Memory。
-8. 上下文压缩升级为独立 `app/memory/compression.py`，支持滑动窗口与结构化语义摘要。`[已完成]`
-9. 多 Agent 共享状态与通信增强：通过 `agent_handoffs` 暴露 Memory → Planner → Retriever → Research → Advisor → Memory 的结构化交接上下文。`[已完成]`
-
-### 第三阶段：工程化与科研味
-
-10. Agent Trace 持久化与可视化，后续接 LangSmith / OpenTelemetry。`[已完成]`
-11. RAG Evaluation：Recall、Precision、Faithfulness、Relevance。`[已完成]`
-12. Benchmark Dataset：自建导师推荐测试集。`[已完成]`
-13. React / Next.js 前端与 Workflow UI。`[已完成：React / Vite]`
-14. Docker 部署与配置系统完善。`[已完成]`
-15. 系统能力概览接口：`GET /api/system/capabilities`。`[已完成]`
-16. 配置安全上限裁剪：对 Browser Research、RAG chunk、上下文窗口和超时配置做集中保护。`[已完成]`
-17. 高校种子站点库：新增 `data/sample/university_seed_sites.json`、`GET /api/browser/seed-sites`，Browser Research 可自动注入匹配入口。`[已完成]`
-18. 高校入口匹配解释：种子库扩展到 16 个高校/学院入口，并在 API 与两套前端展示匹配词和匹配原因。`[已完成]`
-19. React RAG Evaluation 面板：展示 benchmark 数据集摘要、baseline / hybrid / reranker 策略对比和 chunk 配置对比。`[已完成]`
-20. 端到端演示检查脚本：新增 `scripts/demo_check.py`，可对运行中的 FastAPI 服务执行 health、chat、seed-sites、RAG dataset 和 RAG compare 检查。`[已完成]`
-21. 导师数据质量审计与清理：新增 `scripts/audit_tutor_data.py` 和 `scripts/clean_invalid_tutors.py`，并已清理本地运行库中 8 条无效抓取记录。`[已完成]`
-22. Browser Research 候选预检与质量评分：新增候选入库前预检、导师档案质量分、可入库标记和拒绝原因展示，避免搜索页/列表页/噪声页误入库。`[已完成]`
-23. Browser Research dry-run 预检模式：新增只评分不写库的研究模式，两套前端均可一键预检真实公开页面质量，降低污染导师库风险。`[已完成]`
-24. Browser Research 候选质量报告：API 返回质量统计、拒绝原因分布和最高分候选，React 前端展示质量报告面板。`[已完成]`
-25. Browser Research 质量检查脚本：新增 `scripts/browser_quality_check.py`，对运行中的服务执行 dry-run 质量检查并基于合格候选数和平均质量分判定是否通过。`[已完成]`
-26. 手动 URL 采集质量门控：`/api/ingest/url` 复用导师档案质量评分，拒绝搜索页、噪声页和缺少证据的低质量页面，避免绕过 Browser Research 门控污染导师库。`[已完成]`
-27. 单 URL 采集预检：新增 `/api/ingest/url/preview` 和两套前端“仅预检不入库”入口，可先查看页面质量、档案质量分和拒绝原因再决定是否入库。`[已完成]`
-28. 导师数据质量审计 API：新增 `GET /api/tutors/audit` 和 React 审计面板，可查看当前导师库有效/无效数量、缺失项、地区/机构分布和无效记录原因。`[已完成]`
-29. 检索结果质量评估：新增 `scripts/evaluate_retrieval_quality.py`，输出每个 benchmark 的预期导师、召回导师、命中、有效额外导师和干扰项，并可用阈值失败退出。`[已完成]`
-30. 真实 Browser Research dry-run 质量验证：在不写库前提下，武汉多模态查询已从华科教师名录发现 3 个合格真实教师主页候选，证明链路能获得正确数据且质量门控会拒绝超出处理上限的候选。`[已完成]`
+6. Query Rewriter / 搜索域限制 / 搜索结果过滤器已完成第一版，后续升级 multi-query retrieval 与 search planning。
+7. Browser Agent 已支持搜索页 → 学院/师资页 → 导师主页；后续继续增强分页、教师平台子页面、论文页和招生页抓取。
+8. RAG 已支持 hybrid / reranker / evaluation；后续重点改为真实 benchmark 覆盖率和真实数据检索相关性。
+9. 前端、Trace、Memory、Docker、配置上限、审计和质量报告已完成第一版，后续围绕真实数据展示质量证据。
 
 原因：
 
-项目已经支持可选 LLM 调用、结构化多步计划、Playwright 动态浏览和自主浏览研究闭环；接下来不应继续堆散功能，而应提升 Agent 自主性、检索质量、Browser 能力、Workflow 深度、工程完整性和 Evaluation 能力。
+项目工程骨架已经完整，继续堆功能的收益低于补齐真实数据证据链。下一步的核心验收标准是：公开网页 dry-run 能找到合格导师主页，真实样本可审计，真实 benchmark 能检索到正确导师，并且报告中明确区分 demo 数据、真实有效数据和干扰项。
 
 LLM 配置示例：
 

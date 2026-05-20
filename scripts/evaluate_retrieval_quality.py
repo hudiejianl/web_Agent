@@ -10,7 +10,9 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.eval.rag_eval import RAGEvaluator
+from app.models.schemas import TutorProfile
 from app.rag.retriever import TutorRetriever
+from app.storage.repositories import load_tutors_from_json
 from scripts.audit_tutor_data import quality_reasons
 
 
@@ -45,9 +47,37 @@ class RetrievalQualityError(RuntimeError):
     pass
 
 
-def evaluate_retrieval_quality(limit: int = 5, strategy: str = "reranker") -> RetrievalQualityReport:
-    evaluator = RAGEvaluator()
-    retriever = TutorRetriever()
+class InMemoryTutorRepository:
+    def __init__(self, profiles: list[TutorProfile]):
+        self.profiles = profiles
+        for index, profile in enumerate(self.profiles):
+            profile.id = profile.id or f"in-memory-{index}"
+
+    def list(self, limit: int = 200) -> list[TutorProfile]:
+        return self.profiles[:limit]
+
+    def get(self, tutor_id: str) -> TutorProfile | None:
+        return next((profile for profile in self.profiles if profile.id == tutor_id), None)
+
+
+class EmptyVectorStore:
+    def query(self, text: str, limit: int = 5) -> list[str]:
+        return []
+
+
+def build_retriever(sample_path: str = "") -> TutorRetriever:
+    if not sample_path:
+        return TutorRetriever()
+    profiles = load_tutors_from_json(sample_path)
+    return TutorRetriever(repository=InMemoryTutorRepository(profiles), vector_store=EmptyVectorStore())
+
+
+def evaluate_retrieval_quality(limit: int = 5, strategy: str = "reranker", dataset_path: str = "data/sample/rag_eval.json", sample_path: str = "") -> RetrievalQualityReport:
+    try:
+        evaluator = RAGEvaluator(retriever=build_retriever(sample_path), dataset_path=dataset_path)
+    except TypeError:
+        evaluator = RAGEvaluator()
+    retriever = getattr(evaluator, "retriever", None) or build_retriever(sample_path)
     cases = evaluator.load_cases()
     results: list[RetrievalQualityCaseResult] = []
     hit_counts: list[int] = []
@@ -119,11 +149,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate whether retrieval returns the correct tutor data instead of interference.")
     parser.add_argument("--limit", type=int, default=5)
     parser.add_argument("--strategy", default="reranker")
+    parser.add_argument("--dataset", default="data/sample/rag_eval.json")
+    parser.add_argument("--sample", default="", help="Optional tutor sample JSON for isolated evaluation instead of the runtime tutor database.")
     parser.add_argument("--min-avg-recall", type=float, default=0.5)
     parser.add_argument("--max-interference-cases", type=int, default=0)
     args = parser.parse_args()
 
-    report = evaluate_retrieval_quality(limit=args.limit, strategy=args.strategy)
+    report = evaluate_retrieval_quality(limit=args.limit, strategy=args.strategy, dataset_path=args.dataset, sample_path=args.sample)
     payload = asdict(report)
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     if report.avg_recall < args.min_avg_recall or report.interference_case_count > args.max_interference_cases:

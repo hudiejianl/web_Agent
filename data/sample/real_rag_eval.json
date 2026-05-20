@@ -1,0 +1,20 @@
+[
+  {
+    "id": "real-hust-database-multimedia",
+    "query": "武汉 华中科技大学 计算机学院 数据库 多媒体方向导师",
+    "expected_tutor_names": ["曹忠升"],
+    "relevant_terms": ["武汉", "华中科技大学", "计算机科学与技术学院", "数据库", "多媒体", "大数据"]
+  },
+  {
+    "id": "real-hust-big-data-processing",
+    "query": "华科 计算机学院 大数据处理方向博士生导师",
+    "expected_tutor_names": ["陈汉华"],
+    "relevant_terms": ["华中科技大学", "计算机科学与技术学院", "大数据", "博士生导师"]
+  },
+  {
+    "id": "real-hust-database-multimedia-lecturer",
+    "query": "华中科技大学 计算机软件与理论 数据库 多媒体 硕士生导师",
+    "expected_tutor_names": ["班鹏新"],
+    "relevant_terms": ["华中科技大学", "计算机软件与理论", "数据库", "多媒体", "硕士生导师"]
+  }
+]

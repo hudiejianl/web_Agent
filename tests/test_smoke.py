@@ -139,6 +139,23 @@ def test_research_agent_structures_hust_faculty_profile_without_llm():
     assert {"数据库", "多媒体", "云计算", "大数据"} <= set(profile.research_areas)
 
 
+def test_research_agent_ignores_profile_section_heading_as_name():
+    from app.agents.research_agent import ResearchAgent
+
+    page = {
+        "url": "http://faculty.hust.edu.cn/chen/zh_CN/index.htm",
+        "title": "华中科技大学主页平台管理系统 陈汉华--中文主页--首页",
+        "text": "个人信息\n教授 博士生导师 硕士生导师\n所在单位：计算机科学与技术学院\n毕业院校：华中科技大学\n个人简介\n陈汉华，教授，博士生导师。主要从事大数据处理等方面的研究工作。",
+        "links": [],
+    }
+
+    profile = ResearchAgent().structure_faculty_page(page)
+
+    assert profile.name == "陈汉华"
+    assert profile.institution == "华中科技大学"
+    assert profile.research_areas == ["大数据"]
+
+
 def test_ingest_url_rejects_noisy_profile(monkeypatch):
     from app.agents.browser_agent import BrowserAgent
     from app.services.ingestion import IngestionService, ProfileQualityError
@@ -384,6 +401,39 @@ def test_retrieval_quality_distinguishes_noise_from_valid_extra(monkeypatch):
     assert result.extra_valid_tutor_names == ["李四"]
     assert result.interference_tutor_names == ["噪声"]
     assert "噪声: invalid_source_url" in result.notes
+
+
+def test_retrieval_quality_can_use_isolated_real_sample(tmp_path):
+    import json
+
+    from scripts import evaluate_retrieval_quality
+
+    sample_path = tmp_path / "real_sample.json"
+    dataset_path = tmp_path / "real_eval.json"
+    sample_path.write_text(
+        json.dumps(
+            [
+                {"name": "曹忠升", "institution": "华中科技大学", "department": "计算机科学与技术学院", "location": "武汉", "homepage": "http://faculty.hust.edu.cn/caozhongsheng/zh_CN/index.htm", "research_areas": ["数据库", "多媒体", "大数据"], "summary": "数据库 多媒体 大数据"},
+                {"name": "陈汉华", "institution": "华中科技大学", "department": "计算机科学与技术学院", "location": "武汉", "homepage": "http://faculty.hust.edu.cn/chen/zh_CN/index.htm", "research_areas": ["大数据"], "summary": "大数据处理 博士生导师"},
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    dataset_path.write_text(
+        json.dumps(
+            [{"id": "real-case", "query": "华中科技大学 数据库 多媒体 大数据", "expected_tutor_names": ["曹忠升"], "relevant_terms": ["华中科技大学", "数据库", "多媒体", "大数据"]}],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    report = evaluate_retrieval_quality.evaluate_retrieval_quality(limit=2, strategy="reranker", dataset_path=str(dataset_path), sample_path=str(sample_path))
+
+    assert report.case_count == 1
+    assert report.avg_recall == 1.0
+    assert report.interference_case_count == 0
+    assert report.result[0].hit_tutor_names == ["曹忠升"]
 
 
 def test_health():

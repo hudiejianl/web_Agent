@@ -1,0 +1,62 @@
+[
+  {
+    "name": "曹忠升",
+    "title": "副教授",
+    "institution": "华中科技大学",
+    "department": "计算机科学与技术学院",
+    "location": "武汉",
+    "homepage": "http://faculty.hust.edu.cn/caozhongsheng/zh_CN/index.htm",
+    "research_areas": ["数据库", "多媒体", "云计算", "大数据", "数据管理"],
+    "admission_directions": ["数据库", "多媒体处理", "大数据技术"],
+    "requirements": [],
+    "papers": [],
+    "summary": "华中科技大学计算机科学与技术学院副教授、硕士生导师，主要从事数据库管理系统、多媒体处理技术、云计算与大数据技术等方面的研究工作。",
+    "evidence": [
+      {
+        "title": "华中科技大学主页平台管理系统 曹忠升--中文主页--首页",
+        "url": "http://faculty.hust.edu.cn/caozhongsheng/zh_CN/index.htm",
+        "snippet": "主要从事数据库管理系统、多媒体处理技术、云计算与大数据技术等方面的研究工作。"
+      }
+    ]
+  },
+  {
+    "name": "陈汉华",
+    "title": "教授",
+    "institution": "华中科技大学",
+    "department": "计算机科学与技术学院",
+    "location": "武汉",
+    "homepage": "http://faculty.hust.edu.cn/chen/zh_CN/index.htm",
+    "research_areas": ["大数据"],
+    "admission_directions": ["大数据处理"],
+    "requirements": [],
+    "papers": [],
+    "summary": "华中科技大学计算机科学与技术学院教授、博士生导师，公开主页个人简介显示主要从事大数据处理等方面的研究工作。",
+    "evidence": [
+      {
+        "title": "华中科技大学主页平台管理系统 陈汉华--中文主页--首页",
+        "url": "http://faculty.hust.edu.cn/chen/zh_CN/index.htm",
+        "snippet": "陈汉华，教授，博士生导师。主要从事大数据处理等方面的研究工作。"
+      }
+    ]
+  },
+  {
+    "name": "班鹏新",
+    "title": "副教授",
+    "institution": "华中科技大学",
+    "department": "计算机科学与技术学院",
+    "location": "武汉",
+    "homepage": "http://faculty.hust.edu.cn/banpengxin/zh_CN/index.htm",
+    "research_areas": ["数据库", "多媒体"],
+    "admission_directions": ["数据库", "多媒体技术"],
+    "requirements": [],
+    "papers": [],
+    "summary": "华中科技大学计算机科学与技术学院讲师、硕士生导师，公开主页显示学科为计算机软件与理论，并包含数据库管理系统和多媒体相关经历。",
+    "evidence": [
+      {
+        "title": "华中科技大学主页平台管理系统 班鹏新--中文主页--首页",
+        "url": "http://faculty.hust.edu.cn/banpengxin/zh_CN/index.htm",
+        "snippet": "班鹏新，讲师（高校），硕士生导师，所在单位为计算机科学与技术学院，页面包含数据库管理系统和多媒体相关内容。"
+      }
+    ]
+  }
+]
