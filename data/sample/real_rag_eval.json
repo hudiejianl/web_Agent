@@ -16,5 +16,23 @@
     "query": "华中科技大学 计算机软件与理论 数据库 多媒体 硕士生导师",
     "expected_tutor_names": ["班鹏新"],
     "relevant_terms": ["华中科技大学", "计算机软件与理论", "数据库", "多媒体", "硕士生导师"]
+  },
+  {
+    "id": "real-hust-cloud-big-data-master",
+    "query": "武汉 华中科技大学 云计算 大数据技术 硕士生导师",
+    "expected_tutor_names": ["曹忠升"],
+    "relevant_terms": ["武汉", "华中科技大学", "云计算", "大数据技术", "硕士生导师"]
+  },
+  {
+    "id": "real-hust-professor-phd-big-data",
+    "query": "华科 计算机学院 教授 博士生导师 大数据处理",
+    "expected_tutor_names": ["陈汉华"],
+    "relevant_terms": ["华中科技大学", "计算机科学与技术学院", "教授", "博士生导师", "大数据处理"]
+  },
+  {
+    "id": "real-hust-software-theory-multimedia",
+    "query": "华中科技大学 计算机软件与理论 多媒体技术 数据库管理系统 导师",
+    "expected_tutor_names": ["班鹏新"],
+    "relevant_terms": ["华中科技大学", "计算机软件与理论", "多媒体技术", "数据库管理系统"]
   }
 ]

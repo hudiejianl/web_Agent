@@ -10,10 +10,20 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.eval.rag_eval import RAGEvaluator
-from app.models.schemas import TutorProfile
+from app.models.schemas import RAGEvaluationCase, TutorProfile
 from app.rag.retriever import TutorRetriever
 from app.storage.repositories import load_tutors_from_json
 from scripts.audit_tutor_data import quality_reasons
+
+
+@dataclass
+class RetrievedTutorRelevance:
+    name: str
+    matched_relevant_terms: list[str]
+    missing_relevant_terms: list[str]
+    relevance_ratio: float
+    is_expected: bool
+    is_interference: bool
 
 
 @dataclass
@@ -30,6 +40,7 @@ class RetrievalQualityCaseResult:
     has_interference: bool
     interference_tutor_names: list[str]
     extra_valid_tutor_names: list[str]
+    retrieved_relevance: list[RetrievedTutorRelevance]
     notes: list[str]
 
 
@@ -41,6 +52,8 @@ class RetrievalQualityReport:
     avg_hit_count: float
     avg_rank_of_first_hit: float
     top1_hit_rate: float
+    avg_expected_relevance_ratio: float
+    avg_extra_valid_relevance_ratio: float
     interference_case_count: int
     exact_match_case_count: int
     result: list[RetrievalQualityCaseResult]
@@ -85,6 +98,8 @@ def evaluate_retrieval_quality(limit: int = 5, strategy: str = "reranker", datas
     results: list[RetrievalQualityCaseResult] = []
     hit_counts: list[int] = []
     first_hit_ranks: list[int] = []
+    expected_relevance_ratios: list[float] = []
+    extra_valid_relevance_ratios: list[float] = []
     interference_case_count = 0
     exact_match_case_count = 0
 
@@ -96,15 +111,22 @@ def evaluate_retrieval_quality(limit: int = 5, strategy: str = "reranker", datas
         notes: list[str] = []
         interference_names: list[str] = []
         extra_valid_names: list[str] = []
+        retrieved_relevance: list[RetrievedTutorRelevance] = []
         for profile in retrieved:
-            if profile.name in expected:
-                continue
             reasons = quality_reasons(profile)
-            if reasons:
+            is_expected = profile.name in expected
+            is_interference = bool(reasons)
+            relevance = build_retrieved_relevance(case, profile, is_expected=is_expected, is_interference=is_interference)
+            retrieved_relevance.append(relevance)
+            if is_expected:
+                expected_relevance_ratios.append(relevance.relevance_ratio)
+                continue
+            if is_interference:
                 interference_names.append(profile.name)
                 notes.append(f"{profile.name}: {';'.join(reasons)}")
             else:
                 extra_valid_names.append(profile.name)
+                extra_valid_relevance_ratios.append(relevance.relevance_ratio)
         if interference_names:
             interference_case_count += 1
             notes.append(f"interference={','.join(interference_names)}")
@@ -131,6 +153,7 @@ def evaluate_retrieval_quality(limit: int = 5, strategy: str = "reranker", datas
             has_interference=bool(interference_names),
             interference_tutor_names=interference_names,
             extra_valid_tutor_names=extra_valid_names,
+            retrieved_relevance=retrieved_relevance,
             notes=notes,
         ))
 
@@ -139,6 +162,8 @@ def evaluate_retrieval_quality(limit: int = 5, strategy: str = "reranker", datas
     avg_hit_count = round(sum(hit_counts) / len(hit_counts), 4) if hit_counts else 0.0
     avg_rank_of_first_hit = round(sum(first_hit_ranks) / len(first_hit_ranks), 4) if first_hit_ranks else 0.0
     top1_hit_rate = round(sum(1 for item in results if item.top1_hit) / len(results), 4) if results else 0.0
+    avg_expected_relevance_ratio = round(sum(expected_relevance_ratios) / len(expected_relevance_ratios), 4) if expected_relevance_ratios else 0.0
+    avg_extra_valid_relevance_ratio = round(sum(extra_valid_relevance_ratios) / len(extra_valid_relevance_ratios), 4) if extra_valid_relevance_ratios else 0.0
     return RetrievalQualityReport(
         case_count=len(results),
         avg_recall=avg_recall,
@@ -146,10 +171,35 @@ def evaluate_retrieval_quality(limit: int = 5, strategy: str = "reranker", datas
         avg_hit_count=avg_hit_count,
         avg_rank_of_first_hit=avg_rank_of_first_hit,
         top1_hit_rate=top1_hit_rate,
+        avg_expected_relevance_ratio=avg_expected_relevance_ratio,
+        avg_extra_valid_relevance_ratio=avg_extra_valid_relevance_ratio,
         interference_case_count=interference_case_count,
         exact_match_case_count=exact_match_case_count,
         result=results,
     )
+
+
+def build_retrieved_relevance(case: RAGEvaluationCase, profile: TutorProfile, is_expected: bool, is_interference: bool) -> RetrievedTutorRelevance:
+    document = profile.document_text().lower()
+    terms = getattr(case, "relevant_terms", []) or []
+    matched = [term for term in terms if term_matches_document(term, document)]
+    missing = [term for term in terms if not term_matches_document(term, document)]
+    ratio = round(len(matched) / len(terms), 4) if terms else 0.0
+    return RetrievedTutorRelevance(
+        name=profile.name,
+        matched_relevant_terms=matched,
+        missing_relevant_terms=missing,
+        relevance_ratio=ratio,
+        is_expected=is_expected,
+        is_interference=is_interference,
+    )
+
+
+def term_matches_document(term: str, document: str) -> bool:
+    normalized = term.lower()
+    if normalized == "教授":
+        return "职称：教授" in document
+    return normalized in document
 
 
 def main() -> None:

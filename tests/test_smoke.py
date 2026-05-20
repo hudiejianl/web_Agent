@@ -380,7 +380,7 @@ def test_retrieval_quality_distinguishes_noise_from_valid_extra(monkeypatch):
 
     class FakeEvaluator:
         def load_cases(self):
-            return [SimpleNamespace(id="case-1", query="人工智能 导师", expected_tutor_names=["张三"])]
+            return [SimpleNamespace(id="case-1", query="人工智能 导师", expected_tutor_names=["张三"], relevant_terms=["人工智能"])]
 
     class FakeRetriever:
         def search(self, query, limit=5, strategy="reranker"):
@@ -400,9 +400,14 @@ def test_retrieval_quality_distinguishes_noise_from_valid_extra(monkeypatch):
     assert report.top1_hit_rate == 1.0
     assert result.rank_of_first_hit == 1
     assert result.top1_hit is True
+    assert report.avg_expected_relevance_ratio == 1.0
+    assert report.avg_extra_valid_relevance_ratio == 0.0
     assert result.hit_tutor_names == ["张三"]
     assert result.extra_valid_tutor_names == ["李四"]
     assert result.interference_tutor_names == ["噪声"]
+    assert result.retrieved_relevance[0].matched_relevant_terms == ["人工智能"]
+    assert result.retrieved_relevance[1].relevance_ratio == 0.0
+    assert result.retrieved_relevance[2].is_interference is True
     assert "噪声: invalid_source_url" in result.notes
 
 
@@ -436,9 +441,12 @@ def test_retrieval_quality_can_use_isolated_real_sample(tmp_path):
     assert report.case_count == 1
     assert report.avg_recall == 1.0
     assert report.top1_hit_rate == 1.0
+    assert report.avg_expected_relevance_ratio == 1.0
+    assert report.avg_extra_valid_relevance_ratio < 1.0
     assert report.interference_case_count == 0
     assert report.result[0].rank_of_first_hit == 1
     assert report.result[0].hit_tutor_names == ["曹忠升"]
+    assert report.result[0].retrieved_relevance[0].matched_relevant_terms == ["华中科技大学", "数据库", "多媒体", "大数据"]
 
 
 def test_health():

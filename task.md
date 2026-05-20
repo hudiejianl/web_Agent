@@ -440,13 +440,14 @@ Planner → Browser Agent → Research Agent → Paper Analyzer → RAG Retrieve
 5. **补充 profile-level relevance** `[已完成第一版]`
    - 本地 reranker 已增强院校别名、导师类型、职称、学科方向和精确短语权重，降低宽泛关键词覆盖导致的排序偏差。
    - `scripts/evaluate_retrieval_quality.py` 已输出 `top1_hit_rate`、`rank_of_first_hit` 和 `--min-top1-hit-rate` 门禁，能量化“召回正确但排序不准”。
-   - 真实 HUST 样本隔离 benchmark 当前 3 个用例 top-1 全部命中预期导师，`avg_recall=1.0`、`top1_hit_rate=1.0`、`avg_rank_of_first_hit=1.0`、`interference_case_count=0`。
+   - 真实 HUST 样本隔离 benchmark 已扩展到 6 个用例，覆盖云计算、大数据技术、教授/博士生导师、硕士生导师、计算机软件与理论、多媒体技术和数据库管理系统等约束；当前 top-1 全部命中预期导师，`avg_recall=1.0`、`top1_hit_rate=1.0`、`avg_rank_of_first_hit=1.0`、`interference_case_count=0`。
+   - 质量报告新增 `retrieved_relevance`、`avg_expected_relevance_ratio` 和 `avg_extra_valid_relevance_ratio`，能展示额外有效导师匹配了哪些相关词、缺失哪些关键约束。
 
 ### 后续增强方向
 
 6. Query Rewriter / 搜索域限制 / 搜索结果过滤器已完成第一版，后续升级 multi-query retrieval 与 search planning。
 7. Browser Agent 已支持搜索页 → 学院/师资页 → 导师主页；后续继续增强分页、教师平台子页面、论文页和招生页抓取。
-8. RAG 已支持 hybrid / reranker / evaluation；真实样本第一版已能量化 top-1 相关性，后续重点扩大真实 benchmark 覆盖率。
+8. RAG 已支持 hybrid / reranker / evaluation；真实样本第一版已能量化 top-1 相关性和候选相关词覆盖，后续重点扩大真实高校/导师样本覆盖率。
 9. 前端、Trace、Memory、Docker、配置上限、审计和质量报告已完成第一版，后续围绕真实数据展示质量证据。
 
 原因：
